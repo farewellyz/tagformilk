@@ -46,12 +46,26 @@
         
         // --- Status Configuration ---
         const STATUSES = {
-          not_yet_tagged: { text: 'ยังไม่แท็ก', color: 'bg-gray-200 text-gray-800', hover: 'hover:bg-gray-300', rowColor: 'odd:bg-slate-50/70 even:bg-white', rowHover: 'hover:bg-slate-100' },
-          can_tag: { text: 'แท็กได้', color: 'bg-orange-200 text-orange-800', hover: 'hover:bg-orange-300', rowColor: 'bg-orange-200', rowHover: 'hover:bg-orange-300' },
-          tagging: { text: 'กำลังแท็ก', color: 'bg-yellow-200 text-yellow-800', hover: 'hover:bg-yellow-300', rowColor: 'bg-yellow-200', rowHover: 'hover:bg-yellow-300' },
-          cannot_tag: { text: 'แท็กไม่ได้', color: 'bg-gray-200 text-gray-800', hover: 'hover:bg-gray-300', rowColor: 'odd:bg-slate-50/70 even:bg-white', rowHover: 'hover:bg-slate-100' },
+          hold: { text: 'Hold', color: 'bg-gray-200 text-gray-800', hover: 'hover:bg-gray-300', rowColor: 'odd:bg-slate-50/70 even:bg-white', rowHover: 'hover:bg-slate-100' },
+          pending: { text: 'Pending ?', color: 'bg-yellow-200 text-yellow-800', hover: 'hover:bg-yellow-300', rowColor: 'bg-yellow-100', rowHover: 'hover:bg-yellow-200' },
+          done: { text: 'Done ✓', color: 'bg-emerald-200 text-emerald-800', hover: 'hover:bg-emerald-300', rowColor: 'bg-emerald-100', rowHover: 'hover:bg-emerald-200' },
+          cannot: { text: 'Cannot ✗', color: 'bg-red-200 text-red-800', hover: 'hover:bg-red-300', rowColor: 'bg-red-100', rowHover: 'hover:bg-red-200' },
         };
-        const STATUS_CYCLE = ['not_yet_tagged', 'can_tag', 'tagging', 'cannot_tag'];
+        const STATUS_CYCLE = ['hold', 'pending', 'done', 'cannot'];
+
+        // --- Default Frequently Used Tasks ---
+        const DEFAULT_FREQUENT_TASKS = [
+          "ทำความสะอาดฟิลเตอร์แอร์",
+          "ไม้จูงม่านหลุด",
+          "แก้วอล (แก้ไขงานวอลเปเปอร์)",
+          "แอร์กระพริบ",
+          "น้ำรั่ว",
+          "เปลี่ยนถ่านตาชั่ง",
+          "ผนังร้าว",
+          "ไฟตู้ผ้ากระพริบ",
+          "ขัดเคาท์เตอร์ครัว",
+          "น้ำไม่ร้อน"
+        ];
 
         // --- SVG Icons ---
         const BackArrowIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg> );
@@ -61,6 +75,8 @@
         const SearchIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg> );
         const ExportIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zM10 4a.75.75 0 01.75.75V4a.75.75 0 01-.75.75z" clipRule="evenodd" /><path fillRule="evenodd" d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clipRule="evenodd" /><path d="M10 12a1 1 0 100 2 1 1 0 000-2z" /></svg> );
         const SuccessIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
+        const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>);
+        const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>);
 
         // --- Components ---
         const { useState, useEffect, useMemo } = React;
@@ -93,12 +109,48 @@
                 </div>
             );
         };
+        
+        const ManageFrequentTasksModal = ({ isOpen, onClose, frequentTasks, onAdd, onDelete }) => {
+            const [newItem, setNewItem] = useState('');
+            if (!isOpen) return null;
 
-        const TaskForm = ({ taskToEdit, onSave, onCancelEdit }) => {
+            const handleAdd = () => {
+                if (newItem.trim() && !frequentTasks.includes(newItem.trim())) {
+                    onAdd(newItem.trim());
+                    setNewItem('');
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col" style={{maxHeight: '80vh'}}>
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">จัดการรายการใช้บ่อย</h3>
+                        <div className="flex gap-2 mb-4">
+                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="เพิ่มรายการใหม่..." className="p-2 border border-slate-300 rounded-lg w-full"/>
+                            <button onClick={handleAdd} className="bg-violet-600 text-white px-4 py-2 rounded-lg">เพิ่ม</button>
+                        </div>
+                        <div className="flex-grow overflow-y-auto border rounded-lg p-2">
+                            {frequentTasks.map((item, index) => (
+                                <div key={index} className="flex justify-between items-center p-2 hover:bg-slate-100 rounded-md">
+                                    <span>{item}</span>
+                                    <button onClick={() => onDelete(item)} className="text-red-500 hover:text-red-700"><TrashIcon /></button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex justify-end mt-6">
+                            <button onClick={onClose} className="py-2 px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg transition-colors">ปิด</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TaskForm = ({ taskToEdit, onSave, onCancelEdit, frequentTasks, onManageFrequentTasks }) => {
             const [room, setRoom] = useState('');
             const [description, setDescription] = useState('');
-            const [status, setStatus] = useState('not_yet_tagged');
+            const [status, setStatus] = useState('hold');
             const [error, setError] = useState('');
+            const [isFrequentOpen, setIsFrequentOpen] = useState(false);
             const isEditing = taskToEdit !== null;
 
             useEffect(() => {
@@ -126,17 +178,40 @@
             const resetForm = () => {
                 setRoom('');
                 setDescription('');
-                setStatus('not_yet_tagged');
+                setStatus('hold');
                 setError('');
                 if(isEditing) onCancelEdit();
             };
 
             return (
-                <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-sm rounded-xl p-6 mb-8 border border-slate-200 shadow-md">
+                <form onSubmit={handleSubmit} className="relative z-20 bg-white/60 backdrop-blur-sm rounded-xl p-6 mb-8 border border-slate-200 shadow-md">
                     <h3 className="text-lg font-bold text-slate-700 mb-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <input type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none transition-shadow"/>
-                        <input type="text" placeholder="* รายการซ่อม" value={description} onChange={(e) => setDescription(e.target.value)} className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none md:col-span-2 transition-shadow"/>
+                        <div className="relative md:col-span-2">
+                            <input type="text" placeholder="* รายการซ่อม" value={description} onChange={(e) => setDescription(e.target.value)} className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none transition-shadow w-full"/>
+                            <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setIsFrequentOpen(!isFrequentOpen); }} className="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-1 px-3 rounded-md">ใช้บ่อย</button>
+                                <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-1 px-3 rounded-md">จัดการ</button>
+                            </div>
+                            {isFrequentOpen && (
+                                <div className="absolute z-30 mt-2 w-full bg-white rounded-md shadow-lg border max-h-48 overflow-y-auto">
+                                    <ul className="py-1">
+                                        {frequentTasks.map((task, index) => (
+                                            <li key={index}>
+                                                <a href="#" onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setDescription(task);
+                                                    setIsFrequentOpen(false);
+                                                }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    {task}
+                                                </a>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="w-full sm:w-auto">
@@ -155,7 +230,7 @@
             );
         };
 
-        const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBack, showNotification }) => {
+        const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks }) => {
             const [taskToEdit, setTaskToEdit] = useState(null);
             const [taskToDelete, setTaskToDelete] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -188,7 +263,7 @@
                 let sortedTasks = [...tasksForDay];
 
                 if (sortBy === 'status') {
-                    const statusPriority = { can_tag: 1, tagging: 2, not_yet_tagged: 3, cannot_tag: 4 };
+                    const statusPriority = { pending: 1, hold: 2, cannot: 3, done: 4 };
                     sortedTasks.sort((a, b) => statusPriority[a.status] - statusPriority[b.status]);
                 } else if (sortBy === 'room') {
                     sortedTasks.sort((a, b) => a.room.localeCompare(b.room, undefined, { numeric: true }));
@@ -206,12 +281,16 @@
                     <ConfirmationModal isOpen={taskToDelete !== null} onClose={() => setTaskToDelete(null)} onConfirm={handleDeleteConfirm} title="ยืนยันการลบ" message={`คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${taskToDelete?.description}"?`}/>
                     <div className="max-w-7xl mx-auto">
                         <button onClick={onBack} className="flex items-center bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm mb-4"><BackArrowIcon /> กลับ</button>
-                        <div className="text-center">
-                            <h2 className="text-3xl font-bold text-slate-800">วันที่ {day} {monthNames[month - 1]} {year}</h2>
-                            <p className="text-slate-500 mt-1 mb-6">บันทึกรายการแท็กงาน</p>
+                        <div className="flex items-center justify-center text-center relative">
+                            <button onClick={onPrevDay} className="p-2 rounded-full hover:bg-slate-200 transition-colors"><ChevronLeftIcon /></button>
+                            <div className="mx-4">
+                                <h2 className="text-3xl font-bold text-slate-800">วันที่ {day} {monthNames[month - 1]} {year}</h2>
+                                <p className="text-slate-500 mt-1">บันทึกรายการแท็กงาน</p>
+                            </div>
+                            <button onClick={onNextDay} className="p-2 rounded-full hover:bg-slate-200 transition-colors"><ChevronRightIcon /></button>
                         </div>
-                        <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} />
-                        <div className="flex-grow">
+                        <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} frequentTasks={frequentTasks} onManageFrequentTasks={onManageFrequentTasks} />
+                        <div className="relative z-10 flex-grow">
                             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                                 <h3 className="text-xl font-bold text-slate-700">รายการทั้งหมด ({sortedAndFilteredTasks.length})</h3>
                                 <div className="flex items-center gap-4">
@@ -248,7 +327,7 @@
                                         </thead>
                                         <tbody className="divide-y divide-slate-200">
                                             {sortedAndFilteredTasks.map((task, index) => {
-                                                const statusInfo = STATUSES[task.status] || STATUSES.not_yet_tagged;
+                                                const statusInfo = STATUSES[task.status] || STATUSES.hold;
                                                 return (
                                                 <tr key={task.id} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
                                                     <td className="py-4 px-4 text-slate-700 font-medium">{index + 1}</td>
@@ -306,10 +385,10 @@
                         {monthlySummary.total > 0 && (
                             <div className="mt-6 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-center gap-x-6 gap-y-4 text-center">
                                 <div><p className="text-2xl font-bold text-slate-700">{monthlySummary.total}</p><p className="text-sm text-slate-500">งานทั้งหมด</p></div>
-                                <div><p className="text-2xl font-bold text-orange-500">{monthlySummary.can_tag}</p><p className="text-sm text-slate-500">แท็กได้</p></div>
-                                <div><p className="text-2xl font-bold text-yellow-500">{monthlySummary.tagging}</p><p className="text-sm text-slate-500">กำลังแท็ก</p></div>
-                                <div><p className="text-2xl font-bold text-slate-500">{monthlySummary.not_yet_tagged}</p><p className="text-sm text-slate-500">ยังไม่แท็ก</p></div>
-                                <div><p className="text-2xl font-bold text-slate-500">{monthlySummary.cannot_tag}</p><p className="text-sm text-slate-500">แท็กไม่ได้</p></div>
+                                <div><p className="text-2xl font-bold text-yellow-500">{monthlySummary.pending}</p><p className="text-sm text-slate-500">กำลังแท็ก</p></div>
+                                <div><p className="text-2xl font-bold text-emerald-500">{monthlySummary.done}</p><p className="text-sm text-slate-500">แก้ได้</p></div>
+                                <div><p className="text-2xl font-bold text-slate-500">{monthlySummary.hold}</p><p className="text-sm text-slate-500">ยังไม่แท็ก</p></div>
+                                <div><p className="text-2xl font-bold text-red-500">{monthlySummary.cannot}</p><p className="text-sm text-slate-500">แท็กไม่ได้</p></div>
                             </div>
                         )}
                         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 gap-3 mt-8">
@@ -318,8 +397,12 @@
                                 const dayTasks = tasks[taskKey];
                                 let indicator = null;
                                 if (dayTasks && dayTasks.length > 0) {
-                                    const hasAttentionTasks = dayTasks.some(task => task.status === 'can_tag' || task.status === 'tagging');
-                                    if (hasAttentionTasks) indicator = (<span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">!</span>);
+                                    const allDone = dayTasks.every(task => task.status === 'done');
+                                    if (allDone) {
+                                        indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">✓</span>);
+                                    } else {
+                                        indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">!</span>);
+                                    }
                                 }
                                 return (<button key={day} onClick={() => onSelectDay(day)} className="relative bg-white hover:bg-sky-100 text-slate-700 font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg hover:text-sky-600 transform hover:-translate-y-1 border border-slate-200">{day}{indicator}</button>);
                             })}
@@ -366,6 +449,7 @@
             const [selectedMonth, setSelectedMonth] = useState(null);
             const [selectedDay, setSelectedDay] = useState(null);
             const [notification, setNotification] = useState(null);
+            const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
             const [tasks, setTasks] = useState(() => {
                 try {
                     const localData = localStorage.getItem('mew-tasks-data');
@@ -375,20 +459,29 @@
                     return {};
                 }
             });
+            const [frequentTasks, setFrequentTasks] = useState(() => {
+                try {
+                    const localData = localStorage.getItem('mew-frequent-tasks-data');
+                    return localData ? JSON.parse(localData) : DEFAULT_FREQUENT_TASKS;
+                } catch (error) {
+                    return DEFAULT_FREQUENT_TASKS;
+                }
+            });
 
             useEffect(() => {
                 try {
                     localStorage.setItem('mew-tasks-data', JSON.stringify(tasks));
+                    localStorage.setItem('mew-frequent-tasks-data', JSON.stringify(frequentTasks));
                 } catch (error) {
-                    console.error("Error saving tasks to local storage", error);
+                    console.error("Error saving data to local storage", error);
                 }
-            }, [tasks]);
+            }, [tasks, frequentTasks]);
 
             useEffect(() => {
                 let attentionCount = 0;
                 Object.values(tasks).forEach(dayTasks => {
                     dayTasks.forEach(task => {
-                        if (task.status === 'can_tag' || task.status === 'tagging') {
+                        if (task.status !== 'done') {
                             attentionCount++;
                         }
                     });
@@ -431,11 +524,22 @@
                 });
             };
 
+            const handleAddFrequentTask = (item) => setFrequentTasks(prev => [...prev, item]);
+            const handleDeleteFrequentTask = (item) => setFrequentTasks(prev => prev.filter(i => i !== item));
+
+            const handleDateChange = (offset) => {
+                const currentDate = new Date(selectedYear, selectedMonth - 1, selectedDay);
+                currentDate.setDate(currentDate.getDate() + offset);
+                setSelectedYear(currentDate.getFullYear());
+                setSelectedMonth(currentDate.getMonth() + 1);
+                setSelectedDay(currentDate.getDate());
+            };
+
             const handleExportCSV = (year, month) => {
                 const headers = ["วันที่", "ห้อง", "รายการซ่อม", "สถานะ"];
                 let csvRows = [headers.join(',')];
                 for (let day = 1; day <= getDaysInMonth(year, month); day++) {
-                    const taskKey = `${year}-${month}-${day}`;
+                    const taskKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                     if (tasks[taskKey]) {
                         tasks[taskKey].forEach(task => {
                             const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -465,7 +569,7 @@
                 switch (view) {
                     case 'tasks':
                         const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                        return <TaskView year={selectedYear} month={selectedMonth} day={selectedDay} tasksForDay={tasks[taskKey] || []} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onBack={goBackToDays} showNotification={showNotification} />;
+                        return <TaskView year={selectedYear} month={selectedMonth} day={selectedDay} tasksForDay={tasks[taskKey] || []} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onBack={goBackToDays} onPrevDay={() => handleDateChange(-1)} onNextDay={() => handleDateChange(1)} showNotification={showNotification} frequentTasks={frequentTasks} onManageFrequentTasks={() => setIsManageFrequentOpen(true)} />;
                     case 'days':
                         return <DaysView year={selectedYear} month={selectedMonth} tasks={tasks} onSelectDay={handleSelectDay} onBack={goBackToMonths} onExport={handleExportCSV} />;
                     case 'months':
@@ -478,6 +582,7 @@
             return (
                 <div className="bg-slate-100">
                     {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+                    <ManageFrequentTasksModal isOpen={isManageFrequentOpen} onClose={() => setIsManageFrequentOpen(false)} frequentTasks={frequentTasks} onAdd={handleAddFrequentTask} onDelete={handleDeleteFrequentTask} />
                     <div className="w-full min-h-screen bg-white/50 backdrop-blur-xl relative">{renderContent()}</div>
                 </div>
             );

@@ -161,6 +161,11 @@
                     setDescription(taskToEdit.description);
                     setStatus(taskToEdit.status);
                     setError('');
+                } else {
+                    setRoom('');
+                    setDescription('');
+                    setStatus('hold');
+                    setError('');
                 }
                 setTimeout(() => {
                     if (roomInputRef.current) {
@@ -601,7 +606,7 @@
                 const headers = ["วันที่", "ห้อง", "รายการซ่อม", "สถานะ"];
                 let csvRows = [headers.join(',')];
                 for (let day = 1; day <= getDaysInMonth(year, month); day++) {
-                    const taskKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const taskKey = `${year}-${month}-${day}`;
                     if (tasks[taskKey]) {
                         tasks[taskKey].forEach(task => {
                             const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

@@ -351,11 +351,11 @@
                                     <table className="min-w-full bg-white">
                                         <thead className="bg-slate-50">
                                             <tr>
-                                                <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ลำดับ</th>
-                                                <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ห้อง</th>
-                                                <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">รายการซ่อม</th>
-                                                <th className="py-3 px-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">สถานะ</th>
-                                                <th className="py-3 px-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">จัดการ</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ลำดับ</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ห้อง</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">รายการซ่อม</th>
+                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">สถานะ</th>
+                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">จัดการ</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-200">
@@ -363,10 +363,10 @@
                                                 const statusInfo = STATUSES[task.status] || STATUSES.hold;
                                                 return (
                                                 <tr key={task.id} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
-                                                    <td className="py-4 px-4 text-slate-700 font-medium">{index + 1}</td>
-                                                    <td className="py-4 px-4 text-slate-700">{task.room}</td>
-                                                    <td className="py-4 px-4 text-slate-600">{task.description}</td>
-                                                    <td className="py-4 px-4 text-center">
+                                                    <td className="py-2 px-3 text-slate-700 font-medium">{index + 1}</td>
+                                                    <td className="py-2 px-3 text-slate-700">{task.room}</td>
+                                                    <td className="py-2 px-3 text-slate-600">{task.description}</td>
+                                                    <td className="py-2 px-3 text-center">
                                                         <div className="flex items-center justify-center gap-1 flex-wrap">
                                                             {STATUS_CYCLE.map(statusKey => {
                                                                 const isCurrentStatus = task.status === statusKey;
@@ -388,7 +388,7 @@
                                                             })}
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-4 text-center flex justify-center items-center gap-2">
+                                                    <td className="py-2 px-3 text-center flex justify-center items-center gap-2">
                                                         <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-blue-500 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
                                                         <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
                                                     </td>

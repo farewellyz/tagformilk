@@ -674,7 +674,12 @@
                 let csvRows = [headers.join(',')];
                 for (let day = 1; day <= getDaysInMonth(year, month); day++) {
                     const taskKey = `${year}-${month}-${day}`;
-                    if (tasks[taskKey]) {
+                    if (tasks[taskKey] && tasks[taskKey].length > 0) {
+                        
+                        csvRows.push(''); // Add a blank row separator
+                        const dayHeader = `--- วันที่ ${day} ${monthNames[month - 1]} ${year} ---`;
+                        csvRows.push(`"${dayHeader}"`);
+                        
                         tasks[taskKey].forEach(task => {
                             const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                             const room = task.room;
@@ -684,6 +689,7 @@
                         });
                     }
                 }
+                
                 const csvString = csvRows.join('\n');
                 const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');

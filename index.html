@@ -12,6 +12,14 @@
             darkMode: 'class',
         }
     </script>
+    <script>
+        // Set initial theme to prevent flash of wrong theme
+        if (localStorage.getItem('mew-theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
 
     <!-- 2. โหลดไลบรารีที่จำเป็นสำหรับ React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -550,7 +558,7 @@
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
                             {monthNames.map((name, index) => {
                                 const monthNumber = index + 1;
-                                const isDisabled = monthNumber <= 7;
+                                const isDisabled = year === 2025 && monthNumber <= 7;
                                 return (<button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled} className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white dark:bg-slate-800 hover:bg-sky-500 dark:hover:bg-slate-700 text-sky-600 dark:text-white border-2 border-sky-500 dark:border-slate-700 transform hover:-translate-y-1 dark:hover:shadow-amber-500/20 dark:hover:border-amber-500'}`}>{name}</button>);
                             })}
                         </div>
@@ -559,14 +567,41 @@
             );
         };
 
-        const MainMenu = ({ onSelectYear }) => {
+        const MainMenu = ({ onSelectYear, frequentTaskStats }) => {
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
                     <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
-                    <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">แอปพลิเคชันสำหรับติดตามงานซ่อมของคุณ</p>
-                    <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">
-                        2025
-                    </button>
+                    <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">ศูนย์บัญชาการ (Mission Control)</p>
+                    
+                    <div className="w-full max-w-4xl mx-auto">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">รายการซ่อมที่พบบ่อยที่สุด</h2>
+                        <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-gray-200/80 dark:border-slate-700 mb-8">
+                            {frequentTaskStats.length > 0 ? (
+                                <ol className="space-y-2 text-left">
+                                    {frequentTaskStats.map(([description, count], index) => (
+                                        <li key={description} className="p-3 rounded-lg flex justify-between items-center hover:bg-gray-100 dark:hover:bg-slate-700">
+                                            <div className="flex items-center">
+                                                <span className="font-bold text-slate-500 dark:text-slate-400 w-8">{index + 1}.</span>
+                                                <span className="text-slate-800 dark:text-white">{description}</span>
+                                            </div>
+                                            <span className="font-bold py-1 px-3 rounded-full text-sm bg-sky-100 text-sky-700 dark:bg-amber-400/20 dark:text-amber-300">{count} ครั้ง</span>
+                                        </li>
+                                    ))}
+                                </ol>
+                            ) : (
+                                <p className="text-slate-500 dark:text-slate-400 py-4">ยังไม่มีข้อมูลเพียงพอที่จะแสดงผล</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">
+                            2025
+                        </button>
+                        <button onClick={() => onSelectYear(2026)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">
+                            2026
+                        </button>
+                    </div>
                 </div>
             );
         };
@@ -746,6 +781,22 @@
             const goBackToMonths = () => { setView('months'); setSelectedDay(null); };
             const goBackToDays = () => { setView('days'); setSelectedDay(null); };
 
+            const frequentTaskStats = useMemo(() => {
+                const descriptionCounts = {};
+                Object.values(tasks).forEach(dayTasks => {
+                    dayTasks.forEach(task => {
+                        const desc = task.description.trim();
+                        if (desc) {
+                            descriptionCounts[desc] = (descriptionCounts[desc] || 0) + 1;
+                        }
+                    });
+                });
+
+                return Object.entries(descriptionCounts)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 10);
+            }, [tasks]);
+
             const renderContent = () => {
                 switch (view) {
                     case 'tasks':
@@ -756,7 +807,10 @@
                     case 'months':
                         return <MonthsView year={selectedYear} onSelectMonth={handleSelectMonth} onBack={goBackToMain} />;
                     default:
-                        return <MainMenu onSelectYear={handleSelectYear} />;
+                        return <MainMenu 
+                            onSelectYear={handleSelectYear} 
+                            frequentTaskStats={frequentTaskStats}
+                        />;
                 }
             };
 

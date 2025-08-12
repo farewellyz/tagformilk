@@ -7,6 +7,11 @@
 
     <!-- 1. โหลด Tailwind CSS สำหรับการจัดสไตล์ -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 
     <!-- 2. โหลดไลบรารีที่จำเป็นสำหรับ React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -27,7 +32,7 @@
       }
     </style>
 </head>
-<body class="bg-slate-100">
+<body>
 
     <!-- 5. นี่คือจุดที่แอป React ของเราจะถูกแสดงผล -->
     <div id="root"></div>
@@ -46,10 +51,10 @@
         
         // --- Status Configuration ---
         const STATUSES = {
-          hold: { text: 'Hold', symbol: '', color: 'bg-gray-500 text-white', hover: 'hover:bg-gray-600', rowColor: 'odd:bg-slate-50/70 even:bg-white', rowHover: 'hover:bg-slate-100' },
-          pending: { text: 'Pending ?', color: 'bg-yellow-400 text-yellow-900', hover: 'hover:bg-yellow-500', rowColor: 'bg-yellow-100', rowHover: 'hover:bg-yellow-200' },
-          done: { text: 'Done ✓', color: 'bg-emerald-500 text-white', hover: 'hover:bg-emerald-600', rowColor: 'bg-emerald-100', rowHover: 'hover:bg-emerald-200' },
-          cannot: { text: 'Cannot ✗', color: 'bg-red-500 text-white', hover: 'hover:bg-red-600', rowColor: 'bg-red-100', rowHover: 'hover:bg-red-200' },
+          hold: { text: 'Hold', symbol: '', color: 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100', hover: 'hover:bg-gray-300 dark:hover:bg-slate-700', rowColor: 'odd:bg-slate-50/70 even:bg-white dark:bg-slate-800/30', rowHover: 'hover:bg-slate-100 dark:hover:bg-slate-700/50' },
+          pending: { text: 'Pending ?', color: 'bg-yellow-200 text-yellow-800 dark:bg-amber-400 dark:text-amber-900', hover: 'hover:bg-yellow-300 dark:hover:bg-amber-500', rowColor: 'bg-yellow-100 dark:bg-amber-400/10', rowHover: 'hover:bg-yellow-200 dark:hover:bg-amber-400/20' },
+          done: { text: 'Done ✓', color: 'bg-emerald-200 text-emerald-800 dark:bg-emerald-500 dark:text-white', hover: 'hover:bg-emerald-300 dark:hover:bg-emerald-600', rowColor: 'bg-emerald-100 dark:bg-emerald-500/10', rowHover: 'hover:bg-emerald-200 dark:hover:bg-emerald-500/20' },
+          cannot: { text: 'Cannot ✗', color: 'bg-red-200 text-red-800 dark:bg-red-600 dark:text-white', hover: 'hover:bg-red-300 dark:hover:bg-red-700', rowColor: 'bg-red-100 dark:bg-red-500/10', rowHover: 'hover:bg-red-200 dark:hover:bg-red-500/20' },
         };
         const STATUS_CYCLE = ['hold', 'pending', 'done', 'cannot'];
 
@@ -77,6 +82,9 @@
         const SuccessIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
         const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>);
         const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>);
+        const CopyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M4 3a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H4z" /></svg>);
+        const SunIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>);
+        const MoonIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>);
 
         // --- Components ---
         const { useState, useEffect, useMemo, useRef } = React;
@@ -87,9 +95,9 @@
                 return () => clearTimeout(timer);
             }, [onClose]);
             return (
-                <div className="fixed top-5 right-5 z-50 bg-white rounded-lg shadow-2xl p-4 flex items-center animate-fade-in-down">
+                <div className="fixed top-24 right-5 z-50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg rounded-xl shadow-2xl p-4 flex items-center animate-fade-in-down border border-gray-200 dark:border-slate-700">
                     <SuccessIcon />
-                    <p className="text-slate-700 font-semibold">{message}</p>
+                    <p className="text-gray-800 dark:text-white font-semibold">{message}</p>
                 </div>
             );
         };
@@ -97,13 +105,13 @@
         const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-                        <p className="text-slate-600 mt-2 mb-6">{message}</p>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full max-w-md m-4 border border-slate-700">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+                        <p className="text-gray-600 dark:text-slate-300 mt-2 mb-8">{message}</p>
                         <div className="flex justify-end gap-4">
-                            <button onClick={onClose} className="py-2 px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg transition-colors">ยกเลิก</button>
-                            <button onClick={onConfirm} className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">ยืนยันการลบ</button>
+                            <button onClick={onClose} className="py-2 px-5 bg-gray-200 dark:bg-slate-600 dark:hover:bg-slate-700 hover:bg-gray-300 text-gray-800 dark:text-white font-semibold rounded-lg transition-all duration-200">ยกเลิก</button>
+                            <button onClick={onConfirm} className="py-2 px-5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-red-500/30">ยืนยันการลบ</button>
                         </div>
                     </div>
                 </div>
@@ -122,23 +130,23 @@
             };
 
             return (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col" style={{maxHeight: '80vh'}}>
-                        <h3 className="text-lg font-bold text-slate-800 mb-4">จัดการรายการใช้บ่อย</h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col border border-gray-200 dark:border-slate-700" style={{maxHeight: '80vh'}}>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">จัดการรายการใช้บ่อย</h3>
                         <div className="flex gap-2 mb-4">
-                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="เพิ่มรายการใหม่..." className="p-2 border border-slate-300 rounded-lg w-full"/>
-                            <button onClick={handleAdd} className="bg-violet-600 text-white px-4 py-2 rounded-lg">เพิ่ม</button>
+                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="เพิ่มรายการใหม่..." className="p-2 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full"/>
+                            <button onClick={handleAdd} className="bg-sky-600 dark:bg-amber-500 hover:bg-sky-700 dark:hover:bg-amber-600 text-white px-4 py-2 rounded-lg">เพิ่ม</button>
                         </div>
-                        <div className="flex-grow overflow-y-auto border rounded-lg p-2">
+                        <div className="flex-grow overflow-y-auto border border-gray-200 dark:border-slate-700 rounded-lg p-2">
                             {frequentTasks.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center p-2 hover:bg-slate-100 rounded-md">
-                                    <span>{item}</span>
-                                    <button onClick={() => onDelete(item)} className="text-red-500 hover:text-red-700"><TrashIcon /></button>
+                                <div key={index} className="flex justify-between items-center p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md">
+                                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
+                                    <button onClick={() => onDelete(item)} className="text-red-500 hover:text-red-400"><TrashIcon /></button>
                                 </div>
                             ))}
                         </div>
                         <div className="flex justify-end mt-6">
-                            <button onClick={onClose} className="py-2 px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg transition-colors">ปิด</button>
+                            <button onClick={onClose} className="py-2 px-4 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-800 dark:text-white rounded-lg transition-colors">ปิด</button>
                         </div>
                     </div>
                 </div>
@@ -212,23 +220,23 @@
             };
 
             return (
-                <form onSubmit={handleSubmit} className="relative z-20 bg-white/60 backdrop-blur-sm rounded-xl p-6 mb-8 border border-slate-200 shadow-md">
-                    <div className="mb-4 p-4 border border-dashed rounded-lg">
-                        <label className="block text-slate-700 text-sm font-bold mb-2">วางหลายรายการจาก LINE ที่นี่ (Batch Add)</label>
-                        <textarea value={batchText} onChange={(e) => setBatchText(e.target.value)} className="p-2 border border-slate-300 rounded-lg w-full" placeholder={"501 แอร์ไม่เย็น\n503 ก๊อกน้ำรั่ว"} rows="3"></textarea>
-                        <button type="button" onClick={handleBatchAddClick} className="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">เพิ่มหลายรายการ</button>
+                <form onSubmit={handleSubmit} className="relative z-20 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-gray-200/80 dark:border-slate-700 shadow-lg shadow-gray-400/10 dark:shadow-black/20">
+                    <div className="mb-4 p-4 border border-dashed border-slate-400 dark:border-slate-600 rounded-lg">
+                        <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2">วางหลายรายการจาก LINE ที่นี่ (Batch Add)</label>
+                        <textarea value={batchText} onChange={(e) => setBatchText(e.target.value)} className="p-2 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white rounded-lg w-full" placeholder={"501 แอร์ไม่เย็น\n503 ก๊อกน้ำรั่ว"} rows="3"></textarea>
+                        <button type="button" onClick={handleBatchAddClick} className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg">เพิ่มหลายรายการ</button>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-700 mb-4 border-t pt-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่ (ทีละรายการ)'}</h3>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-5 border-t border-slate-200 dark:border-slate-700 pt-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่ (ทีละรายการ)'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none transition-shadow"/>
+                        <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-all duration-200"/>
                         <div className="relative md:col-span-2">
-                            <input type="text" placeholder="* รายการซ่อม" value={description} onChange={(e) => setDescription(e.target.value)} className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-violet-400 focus:outline-none transition-shadow w-full"/>
+                            <input type="text" placeholder="* รายการซ่อม" value={description} onChange={(e) => setDescription(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-shadow w-full"/>
                             <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setIsFrequentOpen(!isFrequentOpen); }} className="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-1 px-3 rounded-md">ใช้บ่อย</button>
-                                <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-1 px-3 rounded-md">จัดการ</button>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setIsFrequentOpen(!isFrequentOpen); }} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">ใช้บ่อย</button>
+                                <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">จัดการ</button>
                             </div>
                             {isFrequentOpen && (
-                                <div className="absolute z-30 mt-2 w-full bg-white rounded-md shadow-lg border max-h-48 overflow-y-auto">
+                                <div className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
                                     <ul className="py-1">
                                         {frequentTasks.map((task, index) => (
                                             <li key={index}>
@@ -236,7 +244,7 @@
                                                     e.preventDefault();
                                                     setDescription(task);
                                                     setIsFrequentOpen(false);
-                                                }} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
                                                     {task}
                                                 </a>
                                             </li>
@@ -246,16 +254,16 @@
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-5">
                         <div className="w-full sm:w-auto">
-                            <label className="block text-slate-700 text-sm font-bold mb-2" htmlFor="status">สถานะ</label>
-                            <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="p-3 border border-slate-300 rounded-lg w-full focus:ring-2 focus:ring-violet-400 focus:outline-none">
+                            <label className="block text-gray-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="status">สถานะ</label>
+                            <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none">
                                 {STATUS_CYCLE.map(statusKey => (<option key={statusKey} value={statusKey}>{STATUSES[statusKey].text}</option>))}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 self-end">
-                            {isEditing && <button type="button" onClick={onCancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-6 rounded-lg transition-colors">ยกเลิก</button>}
-                            <button type="submit" className="w-full sm:w-auto flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg hover:shadow-violet-300 transform hover:-translate-y-0.5"><PlusIcon /> {isEditing ? 'บันทึก' : 'เพิ่มรายการ'}</button>
+                        <div className="flex items-center gap-3 self-end pt-4 sm:pt-0">
+                            {isEditing && <button type="button" onClick={onCancelEdit} className="bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-800 dark:text-white font-bold py-3 px-6 rounded-lg transition-colors">ยกเลิก</button>}
+                            <button type="submit" className="w-full sm:w-auto flex items-center justify-center bg-sky-600 hover:bg-sky-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg hover:shadow-sky-500/40 dark:hover:shadow-amber-500/40 transform hover:-translate-y-0.5"><PlusIcon /> {isEditing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'}</button>
                         </div>
                     </div>
                     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
@@ -291,6 +299,23 @@
             const handleStatusChange = (task, newStatus) => {
                 onUpdateTask({ ...task, status: newStatus });
             };
+            
+            const handleCopyDescription = (text) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showNotification('คัดลอกรายการซ่อมแล้ว!');
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                    showNotification('ไม่สามารถคัดลอกได้');
+                }
+                document.body.removeChild(textArea);
+            };
 
             const sortedAndFilteredTasks = useMemo(() => {
                 let sortedTasks = [...tasksForDay];
@@ -313,59 +338,59 @@
                 <div className="p-4 sm:p-6 md:p-8 min-h-screen w-full">
                     <ConfirmationModal isOpen={taskToDelete !== null} onClose={() => setTaskToDelete(null)} onConfirm={handleDeleteConfirm} title="ยืนยันการลบ" message={`คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${taskToDelete?.description}"?`}/>
                     <div className="max-w-7xl mx-auto">
-                        <button onClick={onBack} className="flex items-center bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm mb-4"><BackArrowIcon /> กลับ</button>
+                        <button onClick={onBack} className="flex items-center bg-white/80 dark:bg-white/10 backdrop-blur-sm hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
                         <div className="flex items-center justify-center text-center relative mb-6">
-                            <button onClick={onPrevDay} className="p-2 rounded-full hover:bg-slate-200 transition-colors"><ChevronLeftIcon /></button>
+                            <button onClick={onPrevDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronLeftIcon /></button>
                             <div className="mx-4">
-                                <h2 className="text-3xl font-bold text-slate-800">วันที่ {day} {monthNames[month - 1]} {year}</h2>
-                                <p className="text-slate-500 mt-1">บันทึกรายการแท็กงาน</p>
+                                <h2 className="text-3xl font-bold text-gray-800 dark:text-white">วันที่ {day} {monthNames[month - 1]} {year}</h2>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">บันทึกรายการแท็กงาน</p>
                             </div>
-                            <button onClick={onNextDay} className="p-2 rounded-full hover:bg-slate-200 transition-colors"><ChevronRightIcon /></button>
+                            <button onClick={onNextDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronRightIcon /></button>
                         </div>
                         <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} frequentTasks={frequentTasks} onManageFrequentTasks={onManageFrequentTasks} onBatchAdd={onBatchAdd} />
                         <div className="relative z-10 flex-grow">
                             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                                <h3 className="text-xl font-bold text-slate-700">รายการทั้งหมด ({sortedAndFilteredTasks.length})</h3>
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-white">รายการทั้งหมด ({sortedAndFilteredTasks.length})</h3>
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center">
-                                        <label htmlFor="sort-tasks" className="text-sm font-medium text-slate-700 mr-2">เรียงตาม:</label>
-                                        <select id="sort-tasks" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-400 focus:outline-none">
+                                        <label htmlFor="sort-tasks" className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-2">เรียงตาม:</label>
+                                        <select id="sort-tasks" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="p-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none">
                                             <option value="default">ลำดับที่เพิ่ม</option>
                                             <option value="status">สถานะ</option>
                                             <option value="room">เลขห้อง</option>
                                         </select>
                                     </div>
                                     <div className="relative w-full max-w-xs sm:max-w-sm">
-                                        <input type="text" placeholder="ค้นหารายการ..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="p-2 pl-10 border border-slate-300 rounded-lg w-full focus:ring-2 focus:ring-violet-400 focus:outline-none"/>
+                                        <input type="text" placeholder="ค้นหารายการ..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="p-2 pl-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none"/>
                                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
                                     </div>
                                 </div>
                             </div>
                             {sortedAndFilteredTasks.length === 0 ? (
-                                <div className="text-center text-slate-400 py-12 bg-slate-50 rounded-lg border-2 border-dashed">
+                                <div className="text-center text-slate-400 py-12 bg-slate-50 dark:bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700">
                                     <p className="font-semibold">{searchTerm ? 'ไม่พบรายการที่ตรงกัน' : 'ยังไม่มีรายการสำหรับวันนี้'}</p>
                                     <p className="text-sm">{searchTerm ? 'ลองใช้คำค้นหาอื่น' : 'เพิ่มรายการแรกของคุณโดยใช้ฟอร์มด้านบน'}</p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
-                                    <table className="min-w-full bg-white">
-                                        <thead className="bg-slate-50">
+                                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl">
+                                    <table className="min-w-full bg-white dark:bg-slate-800">
+                                        <thead className="bg-slate-50 dark:bg-slate-900/50">
                                             <tr>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ลำดับ</th>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ห้อง</th>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">รายการซ่อม</th>
-                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">สถานะ</th>
-                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">จัดการ</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">ลำดับ</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">ห้อง</th>
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">รายการซ่อม</th>
+                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">สถานะ</th>
+                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">จัดการ</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-200">
+                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                             {sortedAndFilteredTasks.map((task, index) => {
                                                 const statusInfo = STATUSES[task.status] || STATUSES.hold;
                                                 return (
                                                 <tr key={task.id} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
-                                                    <td className="py-2 px-3 text-slate-700 font-medium">{index + 1}</td>
-                                                    <td className="py-2 px-3 text-slate-700">{task.room}</td>
-                                                    <td className="py-2 px-3 text-slate-600">{task.description}</td>
+                                                    <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{index + 1}</td>
+                                                    <td className="py-2 px-3 text-slate-900 dark:text-white">{task.room}</td>
+                                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-300">{task.description}</td>
                                                     <td className="py-2 px-3 text-center">
                                                         <div className="flex items-center justify-center gap-1 flex-wrap">
                                                             {STATUS_CYCLE.map(statusKey => {
@@ -378,7 +403,7 @@
                                                                         className={`font-bold py-1 px-3 rounded-full text-xs transition-all duration-200 transform
                                                                             ${isCurrentStatus 
                                                                                 ? `${btnStatusInfo.color} scale-105 shadow-lg` 
-                                                                                : `bg-slate-100 text-slate-600 hover:bg-slate-200 opacity-60 hover:opacity-100`
+                                                                                : `bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 opacity-60 hover:opacity-100`
                                                                             }`
                                                                         }
                                                                     >
@@ -389,8 +414,9 @@
                                                         </div>
                                                     </td>
                                                     <td className="py-2 px-3 text-center flex justify-center items-center gap-2">
-                                                        <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-blue-500 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
-                                                        <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
+                                                        <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-sky-500 dark:hover:text-amber-400 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
+                                                        <button onClick={() => handleCopyDescription(task.description)} className="text-slate-400 hover:text-green-500 dark:hover:text-green-400 p-2 rounded-full transition-colors duration-200"><CopyIcon /></button>
+                                                        <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
                                                     </td>
                                                 </tr>
                                             )})}
@@ -443,31 +469,31 @@
                 <div className="p-6 md:p-8 min-h-screen">
                     <div className="max-w-7xl mx-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <button onClick={onBack} className="flex items-center bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm"><BackArrowIcon /> กลับ</button>
-                            {monthlySummary.total > 0 && (<button onClick={() => onExport(year, month)} className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm"><ExportIcon /> ส่งออกเป็น Excel</button>)}
+                            <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md"><BackArrowIcon /> กลับ</button>
+                            {monthlySummary.total > 0 && (<button onClick={() => onExport(year, month)} className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm"><ExportIcon /> ส่งออกเป็น Excel</button>)}
                         </div>
                         <div className="text-center">
-                            <h2 className="text-3xl font-bold text-slate-800">{monthNames[month - 1]}</h2>
-                            <p className="text-slate-500">{year}</p>
+                            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{monthNames[month - 1]}</h2>
+                            <p className="text-slate-500 dark:text-slate-400">{year}</p>
                         </div>
                         
                         <div className="relative my-6">
-                            <input type="text" placeholder="ค้นหางานทั้งหมดในเดือนนี้..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="p-3 pl-10 border border-slate-300 rounded-full w-full focus:ring-2 focus:ring-violet-400 focus:outline-none"/>
+                            <input type="text" placeholder="ค้นหางานทั้งหมดในเดือนนี้..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="p-3 pl-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white rounded-full w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none"/>
                             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
                         </div>
 
                         {searchQuery ? (
                             <div>
-                                <h3 className="text-xl font-bold text-slate-700 mb-4">ผลการค้นหา ({searchResults.length})</h3>
+                                <h3 className="text-xl font-bold text-slate-700 dark:text-white mb-4">ผลการค้นหา ({searchResults.length})</h3>
                                 {searchResults.length > 0 ? (
                                     <div className="space-y-3">
                                         {searchResults.map(task => {
                                             const statusInfo = STATUSES[task.status] || STATUSES.hold;
                                             return (
-                                                <div key={task.id} onClick={() => onSelectDay(task.day)} className={`p-3 rounded-lg flex justify-between items-center cursor-pointer ${statusInfo.rowColor} ${statusInfo.rowHover}`}>
+                                                <div key={task.id} onClick={() => onSelectDay(task.day)} className={`p-3 rounded-lg flex justify-between items-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700`}>
                                                     <div>
-                                                        <p className="font-bold text-slate-800">วันที่ {task.day} - ห้อง: {task.room}</p>
-                                                        <p className="text-slate-600">{task.description}</p>
+                                                        <p className="font-bold text-slate-800 dark:text-white">วันที่ {task.day} - ห้อง: {task.room}</p>
+                                                        <p className="text-slate-600 dark:text-slate-300">{task.description}</p>
                                                     </div>
                                                     <span className={`font-bold py-1 px-3 rounded-full text-sm ${statusInfo.color}`}>{statusInfo.text}</span>
                                                 </div>
@@ -475,18 +501,18 @@
                                         })}
                                     </div>
                                 ) : (
-                                    <p className="text-center text-slate-500 py-8">ไม่พบรายการที่ตรงกับ "{searchQuery}"</p>
+                                    <p className="text-center text-slate-500 dark:text-slate-400 py-8">ไม่พบรายการที่ตรงกับ "{searchQuery}"</p>
                                 )}
                             </div>
                         ) : (
                             <>
                                 {monthlySummary.total > 0 && (
-                                    <div className="mt-6 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-center gap-x-6 gap-y-4 text-center">
-                                        <div><p className="text-2xl font-bold text-slate-700">{monthlySummary.total}</p><p className="text-sm text-slate-500">งานทั้งหมด</p></div>
-                                        <div><p className="text-2xl font-bold text-yellow-500">{monthlySummary.pending}</p><p className="text-sm text-slate-500">กำลังแท็ก</p></div>
-                                        <div><p className="text-2xl font-bold text-emerald-500">{monthlySummary.done}</p><p className="text-sm text-slate-500">แท็กได้</p></div>
-                                        <div><p className="text-2xl font-bold text-slate-500">{monthlySummary.hold}</p><p className="text-sm text-slate-500">ยังไม่แท็ก</p></div>
-                                        <div><p className="text-2xl font-bold text-red-500">{monthlySummary.cannot}</p><p className="text-sm text-slate-500">แท็กไม่ได้</p></div>
+                                    <div className="mt-6 p-4 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-wrap justify-center gap-x-6 gap-y-4 text-center">
+                                        <div><p className="text-2xl font-bold text-slate-800 dark:text-white">{monthlySummary.total}</p><p className="text-sm text-slate-500 dark:text-slate-400">งานทั้งหมด</p></div>
+                                        <div><p className="text-2xl font-bold text-yellow-500 dark:text-yellow-400">{monthlySummary.pending}</p><p className="text-sm text-slate-500 dark:text-slate-400">กำลังแท็ก</p></div>
+                                        <div><p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{monthlySummary.done}</p><p className="text-sm text-slate-500 dark:text-slate-400">แท็กได้</p></div>
+                                        <div><p className="text-2xl font-bold text-slate-500 dark:text-slate-300">{monthlySummary.hold}</p><p className="text-sm text-slate-500 dark:text-slate-400">ยังไม่แท็ก</p></div>
+                                        <div><p className="text-2xl font-bold text-red-500 dark:text-red-400">{monthlySummary.cannot}</p><p className="text-sm text-slate-500 dark:text-slate-400">แท็กไม่ได้</p></div>
                                     </div>
                                 )}
                                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 gap-3 mt-8">
@@ -497,12 +523,12 @@
                                         if (dayTasks && dayTasks.length > 0) {
                                             const allDone = dayTasks.every(task => task.status === 'done');
                                             if (allDone) {
-                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">✓</span>);
+                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 leading-none">✓</span>);
                                             } else {
-                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">!</span>);
+                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 animate-pulse">!</span>);
                                             }
                                         }
-                                        return (<button key={day} onClick={() => onSelectDay(day)} className="relative bg-white hover:bg-sky-100 text-slate-700 font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg hover:text-sky-600 transform hover:-translate-y-1 border border-slate-200">{day}{indicator}</button>);
+                                        return (<button key={day} onClick={() => onSelectDay(day)} className="relative bg-white dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg dark:hover:text-amber-400 transform hover:-translate-y-1 border border-slate-200 dark:border-slate-700">{day}{indicator}</button>);
                                     })}
                                 </div>
                             </>
@@ -516,16 +542,16 @@
             return (
                 <div className="p-6 md:p-8 min-h-screen">
                     <div className="max-w-7xl mx-auto">
-                        <button onClick={onBack} className="flex items-center bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm mb-4"><BackArrowIcon /> กลับ</button>
+                        <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
                         <div className="text-center">
-                            <h2 className="text-3xl font-bold text-slate-800">เลือกเดือน</h2>
-                            <p className="text-slate-500">ปี {year}</p>
+                            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">เลือกเดือน</h2>
+                            <p className="text-slate-500 dark:text-slate-400">ปี {year}</p>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
                             {monthNames.map((name, index) => {
                                 const monthNumber = index + 1;
                                 const isDisabled = monthNumber <= 7;
-                                return (<button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled} className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white hover:bg-sky-500 text-sky-600 hover:text-white border-2 border-sky-500 transform hover:-translate-y-1 hover:shadow-sky-300'}`}>{name}</button>);
+                                return (<button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled} className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white dark:bg-slate-800 hover:bg-sky-500 dark:hover:bg-slate-700 text-sky-600 dark:text-white border-2 border-sky-500 dark:border-slate-700 transform hover:-translate-y-1 dark:hover:shadow-amber-500/20 dark:hover:border-amber-500'}`}>{name}</button>);
                             })}
                         </div>
                     </div>
@@ -536,12 +562,15 @@
         const MainMenu = ({ onSelectYear }) => {
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-violet-600 mb-2 py-2">แท็กงานของมิ้ว</h1>
-                    <p className="text-slate-500 mb-12">แอปพลิเคชันสำหรับติดตามงานซ่อมของคุณ</p>
-                    <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-violet-600 hover:from-sky-600 hover:to-violet-700 text-white font-bold py-4 px-12 rounded-full text-2xl shadow-xl hover:shadow-2xl hover:shadow-violet-300 transform hover:scale-105 transition-all duration-300">2025</button>
+                    <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
+                    <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">แอปพลิเคชันสำหรับติดตามงานซ่อมของคุณ</p>
+                    <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">
+                        2025
+                    </button>
                 </div>
             );
         };
+
 
         const App = () => {
             const [view, setView] = useState('main');
@@ -550,6 +579,8 @@
             const [selectedDay, setSelectedDay] = useState(null);
             const [notification, setNotification] = useState(null);
             const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
+            const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
+
             const [tasks, setTasks] = useState(() => {
                 try {
                     const localData = localStorage.getItem('mew-tasks-data');
@@ -567,6 +598,16 @@
                     return DEFAULT_FREQUENT_TASKS;
                 }
             });
+
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                } else {
+                    root.classList.remove('dark');
+                }
+                localStorage.setItem('mew-theme', theme);
+            }, [theme]);
 
             useEffect(() => {
                 try {
@@ -720,10 +761,13 @@
             };
 
             return (
-                <div className="bg-slate-100">
+                <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 text-slate-800 dark:text-sky-300 relative">
                     {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
                     <ManageFrequentTasksModal isOpen={isManageFrequentOpen} onClose={() => setIsManageFrequentOpen(false)} frequentTasks={frequentTasks} onAdd={handleAddFrequentTask} onDelete={handleDeleteFrequentTask} />
-                    <div className="w-full min-h-screen bg-white/50 backdrop-blur-xl relative">{renderContent()}</div>
+                    {renderContent()}
+                    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="fixed top-5 right-5 z-50 bg-white/80 dark:bg-slate-700/80 backdrop-blur-lg p-3 rounded-full shadow-lg text-yellow-500 dark:text-yellow-400">
+                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+                    </button>
                 </div>
             );
         }

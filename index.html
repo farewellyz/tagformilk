@@ -161,15 +161,16 @@
             );
         };
 
-        const TaskForm = ({ taskToEdit, onSave, onCancelEdit, frequentTasks, onManageFrequentTasks, onBatchAdd }) => {
+        const TaskForm = ({ taskToEdit, onSave, onCancelEdit, onManageFrequentTasks, onBatchAdd, suggestionsSource }) => {
             const [room, setRoom] = useState('');
             const [description, setDescription] = useState('');
             const [status, setStatus] = useState('hold');
             const [error, setError] = useState('');
-            const [isFrequentOpen, setIsFrequentOpen] = useState(false);
+            const [filteredSuggestions, setFilteredSuggestions] = useState([]);
             const [batchText, setBatchText] = useState('');
             const isEditing = taskToEdit !== null;
             const roomInputRef = useRef(null);
+            const descriptionWrapperRef = useRef(null);
 
             useEffect(() => {
                 if (taskToEdit) {
@@ -189,6 +190,19 @@
                     }
                 }, 100);
             }, [taskToEdit]);
+            
+            useEffect(() => {
+                // ฟังก์ชันสำหรับปิดกล่องคำแนะนำเมื่อคลิกนอกพื้นที่
+                const handleClickOutside = (event) => {
+                    if (descriptionWrapperRef.current && !descriptionWrapperRef.current.contains(event.target)) {
+                        setFilteredSuggestions([]);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => {
+                    document.removeEventListener("mousedown", handleClickOutside);
+                };
+            }, [descriptionWrapperRef]);
             
              const resetForm = () => {
                 setRoom('');
@@ -227,6 +241,30 @@
                 }
             };
 
+            const handleDescriptionChange = (e) => {
+                const value = e.target.value;
+                setDescription(value);
+
+                if (value.trim()) {
+                    const lowercasedValue = value.toLowerCase();
+                    // ค้นหาและแสดงคำแนะนำ
+                    const suggestions = suggestionsSource
+                        .filter(suggestion => 
+                            suggestion.toLowerCase().includes(lowercasedValue) && 
+                            suggestion.toLowerCase() !== lowercasedValue // ไม่ต้องแสดงถ้าพิมพ์ตรงกันเป๊ะ
+                        )
+                        .slice(0, 10); // แสดงสูงสุด 10 รายการ
+                    setFilteredSuggestions(suggestions);
+                } else {
+                    setFilteredSuggestions([]);
+                }
+            };
+
+            const handleSuggestionClick = (suggestion) => {
+                setDescription(suggestion);
+                setFilteredSuggestions([]); // ซ่อนกล่องคำแนะนำ
+            };
+
             return (
                 <form onSubmit={handleSubmit} className="relative z-20 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-gray-200/80 dark:border-slate-700 shadow-lg shadow-gray-400/10 dark:shadow-black/20">
                     <div className="mb-4 p-4 border border-dashed border-slate-400 dark:border-slate-600 rounded-lg">
@@ -237,23 +275,30 @@
                     <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-5 border-t border-slate-200 dark:border-slate-700 pt-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่ (ทีละรายการ)'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-all duration-200"/>
-                        <div className="relative md:col-span-2">
-                            <input type="text" placeholder="* รายการซ่อม" value={description} onChange={(e) => setDescription(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-shadow w-full"/>
+                        <div className="relative md:col-span-2" ref={descriptionWrapperRef}>
+                            <input 
+                                type="text" 
+                                placeholder="* รายการซ่อม (พิมพ์เพื่อค้นหา)" 
+                                value={description} 
+                                onChange={handleDescriptionChange} 
+                                onFocus={handleDescriptionChange} // แสดงคำแนะนำเมื่อ focus
+                                autoComplete="off" // ปิด autocomplete ของเบราว์เซอร์
+                                className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-shadow w-full"
+                            />
                             <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setIsFrequentOpen(!isFrequentOpen); }} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">ใช้บ่อย</button>
                                 <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">จัดการ</button>
                             </div>
-                            {isFrequentOpen && (
+                            {/* ส่วนแสดงรายการแนะนำ */}
+                            {filteredSuggestions.length > 0 && (
                                 <div className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
                                     <ul className="py-1">
-                                        {frequentTasks.map((task, index) => (
+                                        {filteredSuggestions.map((suggestion, index) => (
                                             <li key={index}>
                                                 <a href="#" onClick={(e) => {
                                                     e.preventDefault();
-                                                    setDescription(task);
-                                                    setIsFrequentOpen(false);
+                                                    handleSuggestionClick(suggestion);
                                                 }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
-                                                    {task}
+                                                    {suggestion}
                                                 </a>
                                             </li>
                                         ))}
@@ -279,7 +324,7 @@
             );
         };
 
-        const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBatchAdd, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks }) => {
+        const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBatchAdd, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks, suggestionsSource }) => {
             const [taskToEdit, setTaskToEdit] = useState(null);
             const [taskToDelete, setTaskToDelete] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
@@ -355,7 +400,14 @@
                             </div>
                             <button onClick={onNextDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronRightIcon /></button>
                         </div>
-                        <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} frequentTasks={frequentTasks} onManageFrequentTasks={onManageFrequentTasks} onBatchAdd={onBatchAdd} />
+                        <TaskForm 
+                            taskToEdit={taskToEdit} 
+                            onSave={handleSaveTask} 
+                            onCancelEdit={() => setTaskToEdit(null)} 
+                            suggestionsSource={suggestionsSource} 
+                            onManageFrequentTasks={onManageFrequentTasks} 
+                            onBatchAdd={onBatchAdd} 
+                        />
                         <div className="relative z-10 flex-grow">
                             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                                 <h3 className="text-xl font-bold text-gray-800 dark:text-white">รายการทั้งหมด ({sortedAndFilteredTasks.length})</h3>
@@ -634,6 +686,19 @@
                 }
             });
 
+            // สร้างแหล่งข้อมูลสำหรับคำแนะนำทั้งหมด (จากรายการใช้บ่อย + รายการที่เคยเพิ่ม)
+            const suggestionsSource = useMemo(() => {
+                const allDescriptions = new Set(frequentTasks);
+                Object.values(tasks).forEach(dayTasks => {
+                    dayTasks.forEach(task => {
+                        if (task.description) {
+                            allDescriptions.add(task.description.trim());
+                        }
+                    });
+                });
+                return Array.from(allDescriptions).sort();
+            }, [tasks, frequentTasks]);
+
             useEffect(() => {
                 const root = window.document.documentElement;
                 if (theme === 'dark') {
@@ -801,7 +866,23 @@
                 switch (view) {
                     case 'tasks':
                         const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                        return <TaskView year={selectedYear} month={selectedMonth} day={selectedDay} tasksForDay={tasks[taskKey] || []} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onBatchAdd={handleBatchAdd} onBack={goBackToDays} onPrevDay={() => handleDateChange(-1)} onNextDay={() => handleDateChange(1)} showNotification={showNotification} frequentTasks={frequentTasks} onManageFrequentTasks={() => setIsManageFrequentOpen(true)} />;
+                        return <TaskView 
+                                    year={selectedYear} 
+                                    month={selectedMonth} 
+                                    day={selectedDay} 
+                                    tasksForDay={tasks[taskKey] || []} 
+                                    onAddTask={handleAddTask} 
+                                    onUpdateTask={handleUpdateTask} 
+                                    onDeleteTask={handleDeleteTask} 
+                                    onBatchAdd={handleBatchAdd} 
+                                    onBack={goBackToDays} 
+                                    onPrevDay={() => handleDateChange(-1)} 
+                                    onNextDay={() => handleDateChange(1)} 
+                                    showNotification={showNotification} 
+                                    frequentTasks={frequentTasks} 
+                                    onManageFrequentTasks={() => setIsManageFrequentOpen(true)}
+                                    suggestionsSource={suggestionsSource}
+                                />;
                     case 'days':
                         return <DaysView year={selectedYear} month={selectedMonth} tasks={tasks} onSelectDay={handleSelectDay} onBack={goBackToMonths} onExport={handleExportCSV} />;
                     case 'months':

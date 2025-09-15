@@ -619,7 +619,7 @@
             );
         };
 
-        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary }) => {
+        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary, onSelectTask }) => {
             const hasHoldTasks = holdTasksSummary && Object.keys(holdTasksSummary).length > 0;
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
@@ -632,15 +632,24 @@
                         <div className="bg-white/60 dark:bg-red-500/5 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-red-200/80 dark:border-slate-700">
                             {hasHoldTasks ? (
                                 <div className="space-y-2 text-left max-h-72 overflow-y-auto p-2">
-                                    {Object.entries(holdTasksSummary).map(([room, descriptions]) => (
-                                        <div key={room} className="p-3 rounded-lg bg-white/50 dark:bg-slate-900/40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                                    {Object.entries(holdTasksSummary).map(([room, tasks]) => (
+                                        <div key={room} className="p-3 rounded-lg bg-white/50 dark:bg-slate-900/40">
                                             <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
                                               <span className="text-red-500 mr-2">●</span>
                                               ห้อง: {room}
                                             </h3>
-                                            <ul className="list-none pl-5 mt-1">
-                                                {descriptions.map((desc, index) => (
-                                                    <li key={index} className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1">{desc}</li>
+                                            <ul className="list-none pl-5 mt-1 space-y-2">
+                                                {tasks.map((task) => (
+                                                    <li 
+                                                        key={task.id} 
+                                                        onClick={() => onSelectTask(task.year, task.month, task.day)}
+                                                        className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1 hover:bg-sky-100 dark:hover:bg-sky-500/10 cursor-pointer rounded-r-md transition-colors"
+                                                    >
+                                                        {task.description}
+                                                        <span className="block text-xs text-slate-400 dark:text-slate-500">
+                                                            วันที่ {task.day} {monthNames[task.month - 1]} {task.year}
+                                                        </span>
+                                                    </li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -764,28 +773,33 @@
                 }
             }, [tasks]);
             
-            // --- ส่วน Logic ใหม่สำหรับสรุปงาน Hold ---
             const holdTasksSummary = useMemo(() => {
                 const holdTasksByRoom = {};
 
-                // รวบรวมงานทั้งหมดจากทุกวัน แล้วกรองเฉพาะสถานะ 'hold'
-                Object.values(tasks).flat().forEach(task => {
-                    if (task.status === 'hold') {
-                        if (!holdTasksByRoom[task.room]) {
-                            holdTasksByRoom[task.room] = [];
+                Object.entries(tasks).forEach(([dateKey, dayTasks]) => {
+                    const [year, month, day] = dateKey.split('-').map(Number);
+                    dayTasks.forEach(task => {
+                        if (task.status === 'hold') {
+                            if (!holdTasksByRoom[task.room]) {
+                                holdTasksByRoom[task.room] = [];
+                            }
+                            holdTasksByRoom[task.room].push({
+                                id: task.id,
+                                description: task.description,
+                                year,
+                                month,
+                                day
+                            });
                         }
-                        holdTasksByRoom[task.room].push(task.description);
-                    }
+                    });
                 });
 
-                // เรียงลำดับห้องเพื่อให้แสดงผลอย่างสม่ำเสมอ
                 const sortedRooms = Object.keys(holdTasksByRoom).sort((a, b) => {
-                    if (a === 'N/A') return 1; // ให้ 'N/A' ไปอยู่ท้ายสุด
+                    if (a === 'N/A') return 1;
                     if (b === 'N/A') return -1;
                     return a.localeCompare(b, undefined, { numeric: true });
                 });
 
-                // สร้าง Object ใหม่ที่เรียงลำดับแล้ว
                 const sortedHoldTasks = {};
                 sortedRooms.forEach(room => {
                     sortedHoldTasks[room] = holdTasksByRoom[room];
@@ -798,6 +812,13 @@
             const handleSelectYear = (year) => { setSelectedYear(year); setView('months'); };
             const handleSelectMonth = (month) => { setSelectedMonth(month); setView('days'); };
             const handleSelectDay = (day) => { setSelectedDay(day); setView('tasks'); };
+            
+            const handleSelectSpecificDate = (year, month, day) => {
+                setSelectedYear(year);
+                setSelectedMonth(month);
+                setSelectedDay(day);
+                setView('tasks');
+            };
 
             const handleAddTask = (newTask) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
@@ -952,6 +973,7 @@
                             onSelectYear={handleSelectYear} 
                             frequentTaskStats={frequentTaskStats}
                             holdTasksSummary={holdTasksSummary}
+                            onSelectTask={handleSelectSpecificDate}
                         />;
                 }
             };
@@ -975,3 +997,4 @@
     </script>
 </body>
 </html>
+

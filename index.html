@@ -619,12 +619,42 @@
             );
         };
 
-        const MainMenu = ({ onSelectYear, frequentTaskStats }) => {
+        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary }) => {
+            const hasHoldTasks = holdTasksSummary && Object.keys(holdTasksSummary).length > 0;
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
                     <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
                     <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">ศูนย์บัญชาการ (Mission Control)</p>
                     
+                    {/* ส่วนสรุปงาน Hold ที่เพิ่มเข้ามาใหม่ */}
+                    <div className="w-full max-w-4xl mx-auto mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">งาน Hold ทั้งหมดที่ยังไม่แท็ก</h2>
+                        <div className="bg-white/60 dark:bg-red-500/5 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-red-200/80 dark:border-slate-700">
+                            {hasHoldTasks ? (
+                                <div className="space-y-2 text-left max-h-72 overflow-y-auto p-2">
+                                    {Object.entries(holdTasksSummary).map(([room, descriptions]) => (
+                                        <div key={room} className="p-3 rounded-lg bg-white/50 dark:bg-slate-900/40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                                            <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
+                                              <span className="text-red-500 mr-2">●</span>
+                                              ห้อง: {room}
+                                            </h3>
+                                            <ul className="list-none pl-5 mt-1">
+                                                {descriptions.map((desc, index) => (
+                                                    <li key={index} className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1">{desc}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-4">
+                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                   <p className="font-semibold text-emerald-700 dark:text-emerald-400">เยี่ยม! ไม่มีงาน Hold ค้างอยู่</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="w-full max-w-4xl mx-auto">
                         <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">รายการซ่อมที่พบบ่อยที่สุด</h2>
                         <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-gray-200/80 dark:border-slate-700 mb-8">
@@ -732,6 +762,36 @@
                 } else {
                     document.title = 'แท็กงานของมิ้ว';
                 }
+            }, [tasks]);
+            
+            // --- ส่วน Logic ใหม่สำหรับสรุปงาน Hold ---
+            const holdTasksSummary = useMemo(() => {
+                const holdTasksByRoom = {};
+
+                // รวบรวมงานทั้งหมดจากทุกวัน แล้วกรองเฉพาะสถานะ 'hold'
+                Object.values(tasks).flat().forEach(task => {
+                    if (task.status === 'hold') {
+                        if (!holdTasksByRoom[task.room]) {
+                            holdTasksByRoom[task.room] = [];
+                        }
+                        holdTasksByRoom[task.room].push(task.description);
+                    }
+                });
+
+                // เรียงลำดับห้องเพื่อให้แสดงผลอย่างสม่ำเสมอ
+                const sortedRooms = Object.keys(holdTasksByRoom).sort((a, b) => {
+                    if (a === 'N/A') return 1; // ให้ 'N/A' ไปอยู่ท้ายสุด
+                    if (b === 'N/A') return -1;
+                    return a.localeCompare(b, undefined, { numeric: true });
+                });
+
+                // สร้าง Object ใหม่ที่เรียงลำดับแล้ว
+                const sortedHoldTasks = {};
+                sortedRooms.forEach(room => {
+                    sortedHoldTasks[room] = holdTasksByRoom[room];
+                });
+
+                return sortedHoldTasks;
             }, [tasks]);
 
             const showNotification = (message, type = 'success') => setNotification({ message, type });
@@ -891,6 +951,7 @@
                         return <MainMenu 
                             onSelectYear={handleSelectYear} 
                             frequentTaskStats={frequentTaskStats}
+                            holdTasksSummary={holdTasksSummary}
                         />;
                 }
             };

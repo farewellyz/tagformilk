@@ -166,6 +166,19 @@
             const isEditing = taskToEdit !== null;
             const roomInputRef = useRef(null);
             const descriptionWrapperRef = useRef(null);
+            const suggestionsContainerRef = useRef(null);
+
+            useEffect(() => {
+                if (suggestionsContainerRef.current && filteredSuggestions.length > 0) {
+                    const activeItem = suggestionsContainerRef.current.querySelector(`li:nth-child(${highlightedIndex + 1})`);
+                    if (activeItem) {
+                        activeItem.scrollIntoView({
+                            block: 'nearest',
+                            behavior: 'smooth' 
+                        });
+                    }
+                }
+            }, [highlightedIndex, filteredSuggestions]);
 
             useEffect(() => {
                 if (taskToEdit) {
@@ -238,7 +251,7 @@
             const handleDescriptionChange = (e) => {
                 const value = e.target.value;
                 setDescription(value);
-                setHighlightedIndex(0); // Reset ไฮไลท์ทุกครั้งที่พิมพ์
+                setHighlightedIndex(0); 
 
                 if (value.trim()) {
                     const lowercasedValue = value.toLowerCase();
@@ -303,7 +316,7 @@
                                 <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">จัดการ</button>
                             </div>
                             {filteredSuggestions.length > 0 && (
-                                <div className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
+                                <div ref={suggestionsContainerRef} className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
                                     <ul className="py-1">
                                         {filteredSuggestions.map((suggestion, index) => (
                                             <li key={index}>

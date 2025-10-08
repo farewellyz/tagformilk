@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>แท็กงานของมิ้ว</title>
 
-    <!-- 1. โหลด Tailwind CSS สำหรับการจัดสไตล์ -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -21,14 +20,11 @@
         }
     </script>
 
-    <!-- 2. โหลดไลบรารีที่จำเป็นสำหรับ React -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-    <!-- 3. โหลด Babel เพื่อแปลโค้ด JSX ในเบราว์เซอร์ -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- 4. โหลดฟอนต์ Kanit จาก Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -42,10 +38,8 @@
 </head>
 <body>
 
-    <!-- 5. นี่คือจุดที่แอป React ของเราจะถูกแสดงผล -->
     <div id="root"></div>
 
-    <!-- 6. โค้ด React ทั้งหมดจะอยู่ในนี้ และต้องกำหนด type="text/babel" -->
     <script type="text/babel">
         // --- Helper Functions ---
         const getDaysInMonth = (year, month) => {
@@ -167,6 +161,7 @@
             const [status, setStatus] = useState('hold');
             const [error, setError] = useState('');
             const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+            const [highlightedIndex, setHighlightedIndex] = useState(0);
             const [batchText, setBatchText] = useState('');
             const isEditing = taskToEdit !== null;
             const roomInputRef = useRef(null);
@@ -192,7 +187,6 @@
             }, [taskToEdit]);
             
             useEffect(() => {
-                // ฟังก์ชันสำหรับปิดกล่องคำแนะนำเมื่อคลิกนอกพื้นที่
                 const handleClickOutside = (event) => {
                     if (descriptionWrapperRef.current && !descriptionWrapperRef.current.contains(event.target)) {
                         setFilteredSuggestions([]);
@@ -244,16 +238,16 @@
             const handleDescriptionChange = (e) => {
                 const value = e.target.value;
                 setDescription(value);
+                setHighlightedIndex(0); // Reset ไฮไลท์ทุกครั้งที่พิมพ์
 
                 if (value.trim()) {
                     const lowercasedValue = value.toLowerCase();
-                    // ค้นหาและแสดงคำแนะนำ
                     const suggestions = suggestionsSource
                         .filter(suggestion => 
                             suggestion.toLowerCase().includes(lowercasedValue) && 
-                            suggestion.toLowerCase() !== lowercasedValue // ไม่ต้องแสดงถ้าพิมพ์ตรงกันเป๊ะ
+                            suggestion.toLowerCase() !== lowercasedValue
                         )
-                        .slice(0, 10); // แสดงสูงสุด 10 รายการ
+                        .slice(0, 10);
                     setFilteredSuggestions(suggestions);
                 } else {
                     setFilteredSuggestions([]);
@@ -262,7 +256,26 @@
 
             const handleSuggestionClick = (suggestion) => {
                 setDescription(suggestion);
-                setFilteredSuggestions([]); // ซ่อนกล่องคำแนะนำ
+                setFilteredSuggestions([]);
+            };
+
+            const handleKeyDown = (e) => {
+                if (filteredSuggestions.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setHighlightedIndex(prev => (prev + 1) % filteredSuggestions.length);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setHighlightedIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredSuggestions[highlightedIndex]) {
+                        handleSuggestionClick(filteredSuggestions[highlightedIndex]);
+                    }
+                } else if (e.key === 'Escape') {
+                    setFilteredSuggestions([]);
+                }
             };
 
             return (
@@ -281,14 +294,14 @@
                                 placeholder="* รายการซ่อม (พิมพ์เพื่อค้นหา)" 
                                 value={description} 
                                 onChange={handleDescriptionChange} 
-                                onFocus={handleDescriptionChange} // แสดงคำแนะนำเมื่อ focus
-                                autoComplete="off" // ปิด autocomplete ของเบราว์เซอร์
+                                onFocus={handleDescriptionChange}
+                                onKeyDown={handleKeyDown}
+                                autoComplete="off"
                                 className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-shadow w-full"
                             />
                             <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
                                 <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">จัดการ</button>
                             </div>
-                            {/* ส่วนแสดงรายการแนะนำ */}
                             {filteredSuggestions.length > 0 && (
                                 <div className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
                                     <ul className="py-1">
@@ -297,7 +310,9 @@
                                                 <a href="#" onClick={(e) => {
                                                     e.preventDefault();
                                                     handleSuggestionClick(suggestion);
-                                                }} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700">
+                                                }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
+                                                    ${index === highlightedIndex ? 'bg-gray-100 dark:bg-slate-700' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`
+                                                }>
                                                     {suggestion}
                                                 </a>
                                             </li>
@@ -626,7 +641,6 @@
                     <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
                     <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">ศูนย์บัญชาการ (Mission Control)</p>
                     
-                    {/* ส่วนสรุปงาน Hold ที่เพิ่มเข้ามาใหม่ */}
                     <div className="w-full max-w-4xl mx-auto mb-12">
                         <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">งาน Hold ทั้งหมดที่ยังไม่แท็ก</h2>
                         <div className="bg-white/60 dark:bg-red-500/5 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-red-200/80 dark:border-slate-700">
@@ -725,7 +739,6 @@
                 }
             });
 
-            // สร้างแหล่งข้อมูลสำหรับคำแนะนำทั้งหมด (จากรายการใช้บ่อย + รายการที่เคยเพิ่ม)
             const suggestionsSource = useMemo(() => {
                 const allDescriptions = new Set(frequentTasks);
                 Object.values(tasks).forEach(dayTasks => {
@@ -898,7 +911,7 @@
                     const taskKey = `${year}-${month}-${day}`;
                     if (tasks[taskKey] && tasks[taskKey].length > 0) {
                         
-                        csvRows.push(''); // Add a blank row separator
+                        csvRows.push(''); 
                         const dayHeader = `--- วันที่ ${day} ${monthNames[month - 1]} ${year} ---`;
                         csvRows.push(`"${dayHeader}"`);
                         
@@ -997,4 +1010,3 @@
     </script>
 </body>
 </html>
-

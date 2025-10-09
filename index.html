@@ -161,7 +161,7 @@
             const [status, setStatus] = useState('hold');
             const [error, setError] = useState('');
             const [filteredSuggestions, setFilteredSuggestions] = useState([]);
-            const [highlightedIndex, setHighlightedIndex] = useState(0);
+            const [highlightedIndex, setHighlightedIndex] = useState(-1); // <-- 1. เปลี่ยนค่าเริ่มต้นเป็น -1
             const [batchText, setBatchText] = useState('');
             const isEditing = taskToEdit !== null;
             const roomInputRef = useRef(null);
@@ -169,12 +169,12 @@
             const suggestionsContainerRef = useRef(null);
 
             useEffect(() => {
-                if (suggestionsContainerRef.current && filteredSuggestions.length > 0) {
+                if (suggestionsContainerRef.current && highlightedIndex > -1 && filteredSuggestions.length > 0) {
                     const activeItem = suggestionsContainerRef.current.querySelector(`li:nth-child(${highlightedIndex + 1})`);
                     if (activeItem) {
                         activeItem.scrollIntoView({
                             block: 'nearest',
-                            behavior: 'smooth' 
+                            behavior: 'smooth'
                         });
                     }
                 }
@@ -198,7 +198,7 @@
                     }
                 }, 100);
             }, [taskToEdit]);
-            
+
             useEffect(() => {
                 const handleClickOutside = (event) => {
                     if (descriptionWrapperRef.current && !descriptionWrapperRef.current.contains(event.target)) {
@@ -210,13 +210,13 @@
                     document.removeEventListener("mousedown", handleClickOutside);
                 };
             }, [descriptionWrapperRef]);
-            
-             const resetForm = () => {
+
+            const resetForm = () => {
                 setRoom('');
                 setDescription('');
                 setStatus('hold');
                 setError('');
-                if(isEditing) {
+                if (isEditing) {
                     onCancelEdit();
                 } else {
                     roomInputRef.current?.focus();
@@ -230,17 +230,17 @@
                     return;
                 }
                 setError('');
-                const taskData = isEditing 
+                const taskData = isEditing
                     ? { ...taskToEdit, room: room.trim() || 'N/A', description: description.trim(), status }
                     : { id: Date.now(), room: room.trim() || 'N/A', description: description.trim(), status };
-                
+
                 onSave(taskData, isEditing);
-                
+
                 if (!isEditing) {
                     resetForm();
                 }
             };
-            
+
             const handleBatchAddClick = () => {
                 if (batchText.trim()) {
                     onBatchAdd(batchText);
@@ -251,13 +251,13 @@
             const handleDescriptionChange = (e) => {
                 const value = e.target.value;
                 setDescription(value);
-                setHighlightedIndex(0); 
+                setHighlightedIndex(-1); // <-- 2. Reset เป็น -1
 
                 if (value.trim()) {
                     const lowercasedValue = value.toLowerCase();
                     const suggestions = suggestionsSource
-                        .filter(suggestion => 
-                            suggestion.toLowerCase().includes(lowercasedValue) && 
+                        .filter(suggestion =>
+                            suggestion.toLowerCase().includes(lowercasedValue) &&
                             suggestion.toLowerCase() !== lowercasedValue
                         )
                         .slice(0, 10);
@@ -271,20 +271,36 @@
                 setDescription(suggestion);
                 setFilteredSuggestions([]);
             };
-
+            
+            // <-- 3. อัปเดตตรรกะการทำงานของปุ่มกดทั้งหมด
             const handleKeyDown = (e) => {
                 if (filteredSuggestions.length === 0) return;
 
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    setHighlightedIndex(prev => (prev + 1) % filteredSuggestions.length);
+                    setHighlightedIndex(prev => {
+                        if (prev < filteredSuggestions.length - 1) {
+                            return prev + 1;
+                        }
+                        return -1; // กลับไปที่ input
+                    });
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    setHighlightedIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+                    setHighlightedIndex(prev => {
+                        if (prev > 0) {
+                            return prev - 1;
+                        }
+                        if (prev === 0) {
+                            return -1; // กลับไปที่ input
+                        }
+                        return filteredSuggestions.length - 1; // ถ้ายังไม่ได้เลือก ให้ไปอันสุดท้าย
+                    });
                 } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (filteredSuggestions[highlightedIndex]) {
-                        handleSuggestionClick(filteredSuggestions[highlightedIndex]);
+                    if (highlightedIndex > -1) {
+                        e.preventDefault(); // ป้องกันการ submit ฟอร์มถ้าเรากำลังจะเลือก suggestion
+                        if (filteredSuggestions[highlightedIndex]) {
+                            handleSuggestionClick(filteredSuggestions[highlightedIndex]);
+                        }
                     }
                 } else if (e.key === 'Escape') {
                     setFilteredSuggestions([]);
@@ -300,13 +316,13 @@
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-5 border-t border-slate-200 dark:border-slate-700 pt-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่ (ทีละรายการ)'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-all duration-200"/>
+                        <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-all duration-200" />
                         <div className="relative md:col-span-2" ref={descriptionWrapperRef}>
-                            <input 
-                                type="text" 
-                                placeholder="* รายการซ่อม (พิมพ์เพื่อค้นหา)" 
-                                value={description} 
-                                onChange={handleDescriptionChange} 
+                            <input
+                                type="text"
+                                placeholder="* รายการซ่อม (พิมพ์เพื่อค้นหา)"
+                                value={description}
+                                onChange={handleDescriptionChange}
                                 onFocus={handleDescriptionChange}
                                 onKeyDown={handleKeyDown}
                                 autoComplete="off"

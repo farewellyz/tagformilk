@@ -46,6 +46,31 @@
           return new Date(year, month, 0).getDate();
         };
 
+        // --- ดึงข้อมูลจาก Google Sheets ---
+        const fetchSheetsData = async (dateString) => {
+			// ⚠️ ตรวจสอบ URL นี้อีกครั้งว่าตรงกับที่ก๊อปมาจากหน้า Deploy หรือไม่
+			const SHEET_URL = "https://script.google.com/macros/s/AKfycbzredBegT4PLwVejdSHn8Xl6RF8xzo2F3ZDOube958DaSTyj4gf10iqJK3Xnv7yl41V/exec"; 
+			
+			try {
+				// เพิ่มโหมด follow เพื่อให้ตามลิงก์ที่ Google Redirect ไป
+				const response = await fetch(`${SHEET_URL}?date=${dateString}`, {
+					redirect: "follow",
+					method: "GET",
+					headers: {
+						"Content-Type": "text/plain;charset=utf-8",
+					},
+				});
+				
+				if (response.ok) {
+					return await response.json();
+				}
+				return null;
+			} catch (error) {
+				console.error("Fetch error:", error);
+				return null;
+			}
+		};
+        
         const monthNames = [
           "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
           "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
@@ -374,6 +399,27 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [sortBy, setSortBy] = useState('default');
 
+            const handleImportFromSheets = async () => {
+                const dateString = `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+                showNotification('กำลังดึงข้อมูลจาก Sheets...', 'info');
+                
+                try {
+                    // เรียกใช้ฟังก์ชัน fetchSheetsData ที่เราจะไปแปะไว้ในจุดที่ 2
+                    const data = await fetchSheetsData(dateString);
+                    
+                    if (data && data.length > 0) {
+                        // แปลงข้อมูลเป็นรูปแบบ "ห้อง รายการ" เพื่อส่งเข้าฟังก์ชัน onBatchAdd ที่คุณมีอยู่แล้ว
+                        const batchText = data.map(item => `${item.room} ${item.detail}`).join('\n');
+                        onBatchAdd(batchText);
+                        showNotification(`ดึงข้อมูลสำเร็จ ${data.length} รายการ`, 'success');
+                    } else {
+                        showNotification('ไม่พบข้อมูลแจ้งซ่อมของวันนี้ใน Sheets', 'error');
+                    }
+                } catch (err) {
+                    showNotification('เชื่อมต่อ Sheets ไม่สำเร็จ', 'error');
+                }
+            };
+            
             const handleSaveTask = (taskData, isEditing) => {
                 if(isEditing) {
                     onUpdateTask(taskData);
@@ -437,6 +483,12 @@
                     <div className="max-w-7xl mx-auto">
                         <button onClick={onBack} className="flex items-center bg-white/80 dark:bg-white/10 backdrop-blur-sm hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
                         <div className="flex items-center justify-center text-center relative mb-6">
+                            <button 
+                                onClick={handleImportFromSheets}
+                                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-lg active:scale-95"
+                            >
+                                📥 ดึงงานจาก Sheets
+                            </button>
                             <button onClick={onPrevDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronLeftIcon /></button>
                             <div className="mx-4">
                                 <h2 className="text-3xl font-bold text-gray-800 dark:text-white">วันที่ {day} {monthNames[month - 1]} {year}</h2>
@@ -1038,4 +1090,5 @@
 
     </script>
 </body>
+
 </html>

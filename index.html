@@ -400,25 +400,41 @@
             const [sortBy, setSortBy] = useState('default');
 
             const handleImportFromSheets = async () => {
-                const dateString = `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
-                showNotification('กำลังดึงข้อมูลจาก Sheets...', 'info');
-                
-                try {
-                    // เรียกใช้ฟังก์ชัน fetchSheetsData ที่เราจะไปแปะไว้ในจุดที่ 2
-                    const data = await fetchSheetsData(dateString);
-                    
-                    if (data && data.length > 0) {
-                        // แปลงข้อมูลเป็นรูปแบบ "ห้อง รายการ" เพื่อส่งเข้าฟังก์ชัน onBatchAdd ที่คุณมีอยู่แล้ว
-                        const batchText = data.map(item => `${item.room} ${item.detail}`).join('\n');
-                        onBatchAdd(batchText);
-                        showNotification(`ดึงข้อมูลสำเร็จ ${data.length} รายการ`, 'success');
-                    } else {
-                        showNotification('ไม่พบข้อมูลแจ้งซ่อมของวันนี้ใน Sheets', 'error');
-                    }
-                } catch (err) {
-                    showNotification('เชื่อมต่อ Sheets ไม่สำเร็จ', 'error');
-                }
-            };
+				const dateString = `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+				showNotification('กำลังตรวจสอบข้อมูล...', 'info');
+				
+				try {
+					const data = await fetchSheetsData(dateString);
+					
+					if (data && data.length > 0) {
+						const uniqueNewData = data.filter(newItem => {
+							// สร้าง "ข้อความเปรียบเทียบ" แบบไม่มีช่องว่าง
+							// เช่น "2008ไฟไม่สว่าง" เทียบกับ "2008ไฟไม่สว่าง"
+							const newItemKey = `${newItem.room}${newItem.detail}`.replace(/\s+/g, '').trim();
+							
+							const isDuplicate = tasksForDay.some(existingTask => {
+								const existingKey = `${existingTask.room}${existingTask.detail}`.replace(/\s+/g, '').trim();
+								return existingKey === newItemKey;
+							});
+							
+							return !isDuplicate;
+						});
+
+						if (uniqueNewData.length > 0) {
+							// ส่งเฉพาะตัวที่ไม่ซ้ำไปเพิ่ม
+							const batchText = uniqueNewData.map(item => `${item.room} ${item.detail}`).join('\n');
+							onBatchAdd(batchText);
+							showNotification(`เพิ่มงานใหม่ ${uniqueNewData.length} รายการ`, 'success');
+						} else {
+							showNotification('รายการเหล่านี้มีอยู่ในระบบแล้ว', 'warning');
+						}
+					} else {
+						showNotification('ไม่พบข้อมูลใน Sheets', 'error');
+					}
+				} catch (err) {
+					showNotification('เชื่อมต่อ Sheets ไม่สำเร็จ', 'error');
+				}
+			};
             
             const handleSaveTask = (taskData, isEditing) => {
                 if(isEditing) {
@@ -926,34 +942,62 @@
                 const lines = multiLineText.split('\n').filter(line => line.trim() !== '');
                 if (lines.length === 0) return;
 
-                const newTasks = lines.map((line, index) => {
-                    const roomRegexWithWord = /(?:ห้อง|room)\s*([0-9A-Za-z-]+)/i;
-                    const roomRegexJustNumber = /^([0-9A-Za-z-]+)\s+(.+)/;
-                    let room = 'N/A';
-                    let description = line.trim();
-
-                    let match = line.match(roomRegexWithWord);
-                    if (match) {
-                        room = match[1];
-                        description = line.replace(match[0], '').trim();
-                    } else {
-                        match = line.match(roomRegexJustNumber);
-                        if (match) {
-                            room = match[1];
-                            description = match[2].trim();
-                        }
-                    }
-                    
-                    return { id: Date.now() + index, room, description, status: 'hold' };
-                });
-
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
+                
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: [...currentDayTasks, ...newTasks] };
-                });
+                    const addedTasks = [];
+                    
+                    // สร้างสำเนาของงานที่มีอยู่แล้ว เพื่อเอาไว้เช็กซ้ำใน Loop
+                    let tempCurrentTasks = [...currentDayTasks];
 
-                showNotification(`${newTasks.length} รายการถูกเพิ่มแล้ว`);
+                    lines.forEach((line, index) => {
+                        const roomRegexWithWord = /(?:ห้อง|room)\s*([0-9A-Za-z-]+)/i;
+                        const roomRegexJustNumber = /^([0-9A-Za-z-]+)\s+(.+)/;
+                        let room = 'N/A';
+                        let description = line.trim();
+
+                        let match = line.match(roomRegexWithWord);
+                        if (match) {
+                            room = match[1];
+                            description = line.replace(match[0], '').trim();
+                        } else {
+                            match = line.match(roomRegexJustNumber);
+                            if (match) {
+                                room = match[1];
+                                description = match[2].trim();
+                            }
+                        }
+
+                        // --- ด่านตรวจข้อมูลซ้ำ (ลบช่องว่างทิ้งทั้งหมดก่อนเทียบ) ---
+                        const newItemKey = `${room}${description}`.replace(/\s+/g, '').trim();
+                        
+                        const isDuplicate = tempCurrentTasks.some(t => {
+                            const existingKey = `${t.room}${t.description}`.replace(/\s+/g, '').trim();
+                            return existingKey === newItemKey;
+                        });
+
+                        // ถ้าไม่ซ้ำ ถึงจะสร้าง Object และเตรียมเพิ่ม
+                        if (!isDuplicate) {
+                            const newTask = { 
+                                id: Date.now() + index + Math.random(), 
+                                room, 
+                                description, 
+                                status: 'hold' 
+                            };
+                            addedTasks.push(newTask);
+                            tempCurrentTasks.push(newTask); // กันซ้ำกันเองใน Batch เดียวกันด้วย
+                        }
+                    });
+
+                    if (addedTasks.length === 0) {
+                        showNotification('ไม่มีรายการใหม่ (ทุกรายการมีอยู่แล้ว)', 'warning');
+                        return prevTasks; // ไม่มีการเปลี่ยนแปลง
+                    }
+
+                    showNotification(`${addedTasks.length} รายการถูกเพิ่มแล้ว`, 'success');
+                    return { ...prevTasks, [taskKey]: [...currentDayTasks, ...addedTasks] };
+                });
             };
 
             const handleUpdateTask = (updatedTask) => {

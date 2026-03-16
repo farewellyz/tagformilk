@@ -401,43 +401,44 @@
 
             const handleImportFromSheets = async () => {
                 try {
-                    if (typeof showNotification === 'function') {
-                        showNotification('กำลังดึงข้อมูลจาก Sheets...', 'info');
-                    }
+                    if (typeof showNotification === 'function') showNotification('กำลังดึงข้อมูล...', 'info');
 
-                    const dayStr = String(day).padStart(2, '0');
-                    const monthStr = String(month).padStart(2, '0');
-                    const formattedDate = `${dayStr}-${monthStr}-${year}`;
+                    // สร้างชื่อแผ่นงาน dd-mm-yyyy จากวันที่ที่เลือก
+                    const d = String(day).padStart(2, '0');
+                    const m = String(month).padStart(2, '0');
+                    const sheetTarget = `${d}-${m}-${year}`;
                     
-                    const scriptUrl = "https://script.google.com/macros/s/AKfycbzE7as60LaeH7r71LOD3rhh7OkPliwHEDbUPlNG-mGzLdq-2LqVn-Wh5xY-HjdzuAP4/exec";
+                    const scriptUrl = "https://script.google.com/macros/s/AKfycbzHbx5AlpnA32YV1L9tr2xyaFVbdQJY2q3ZqlsyiigPoiYfoUTm7nLUrNhDwCSGVbx8/exec";
                     
-                    const response = await fetch(`${scriptUrl}?date=${formattedDate}`);
+                    const response = await fetch(`${scriptUrl}?date=${sheetTarget}`);
                     const data = await response.json();
 
                     if (data && data.length > 0) {
-                        // --- จุดที่แก้: แปลงข้อมูล Array ให้เป็น Text ตามที่ระบบม่อนต้องการ ---
-                        // รวมร่างข้อมูลเป็น: "1205 แอร์ไม่เย็น\n1301 ก๊อกน้ำเสีย"
-                        const textData = data.map(item => `${item.room} ${item.detail}`).join('\n');
-                        
-                        // ส่งเข้า onBatchAdd ในรูปแบบ String
-                        onBatchAdd(textData);
+                        // --- เริ่มจุดที่แก้ไข (ข้อ 1-2) ---
+                        const textData = data.map(item => {
+                            // 1. จัดการเลขห้อง: ถ้าเป็น N/A ให้เป็นค่าว่าง (String ว่าง)
+                            const room = (item.room && item.room.toUpperCase() !== 'N/A') ? item.room.trim() : '';
+                            
+                            // 2. จัดการรายการซ่อม: ล้างคำว่า N/A ออก (กรณี Gemini พ่นติดมาใน detail)
+                            // ใช้ Regex /n\/a/gi เพื่อลบทุกตัวพิมพ์ไม่ว่าจะเล็กหรือใหญ่
+                            const detail = item.detail ? item.detail.replace(/n\/a/gi, "").trim() : '';
+                            
+                            // นำมาต่อกัน ถ้ามีเลขห้องให้เว้นวรรค ถ้าไม่มีให้เอาแค่รายละเอียด
+                            return room ? `${room} ${detail}` : detail;
+                        }).filter(line => line !== "").join('\n'); // กรองบรรทัดว่างทิ้งด้วย
+                        // --- จบจุดที่แก้ไข ---
 
-                        if (typeof showNotification === 'function') {
-                            showNotification(`ดึงข้อมูลสำเร็จ ${data.length} รายการ`, 'success');
-                        }
+                        onBatchAdd(textData); 
+                        showNotification(`ดึงข้อมูลวันที่ ${sheetTarget} สำเร็จ`, 'success');
                     } else {
-                        if (typeof showNotification === 'function') {
-                            showNotification('ไม่พบข้อมูลงานในวันที่นี้', 'info');
-                        }
+                        showNotification('ไม่พบข้อมูลของวันที่เลือก', 'info');
                     }
                 } catch (error) {
                     console.error("Import Error:", error);
-                    if (typeof showNotification === 'function') {
-                        showNotification('การดึงข้อมูลผิดพลาด', 'error');
-                    }
+                    showNotification('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
                 }
             };
-					
+                                
             const handleSaveTask = (taskData, isEditing) => {
                 if(isEditing) {
                     onUpdateTask(taskData);

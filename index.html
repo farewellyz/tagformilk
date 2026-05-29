@@ -877,21 +877,6 @@
             const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
 
-            const handleSyncAllToSheets = async () => {
-                setIsSyncing(true);
-                showNotification('กำลัง Sync ข้อมูลไป Sheets...', 'info');
-                try {
-                    const result = await syncAllToSheets(tasks);
-                    if (result && result.success) {
-                        showNotification(`✅ Sync สำเร็จ! ${result.written} รายการ`, 'success');
-                    } else {
-                        showNotification('❌ Sync ไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
-                    }
-                } catch (err) {
-                    showNotification('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
-                }
-                setIsSyncing(false);
-            };
             const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
 
             const [isLoadingFromSheets, setIsLoadingFromSheets] = useState(true);
@@ -925,13 +910,20 @@
                                 const key = `${yyyy}-${parseInt(mm)}-${parseInt(dd)}`;
                                 if (!rebuilt[key]) rebuilt[key] = [];
                                 rebuilt[key].push({
-                                    id: row.id,
+                                    id: Number(row.id) || row.id,
                                     room: row.room,
                                     description: row.description,
                                     status: row.status
                                 });
                             });
-                            setTasks(rebuilt);
+                            // Merge: เอา Sheets เป็นหลัก แต่เก็บวันที่ไม่มีใน Sheets ไว้ (เช่น งานอนาคต)
+                            setTasks(prevLocal => {
+                                const merged = { ...prevLocal };
+                                Object.keys(rebuilt).forEach(key => {
+                                    merged[key] = rebuilt[key]; // Sheets ชนะสำหรับวันที่มีข้อมูล
+                                });
+                                return merged;
+                            });
                         }
                     } catch (err) {
                         console.error('loadFromSheets error:', err);
@@ -1033,6 +1025,81 @@
             }, [tasks]);
 
             const showNotification = (message, type = 'success') => setNotification({ message, type });
+
+            const handleSyncAllToSheets = async () => {
+                setIsSyncing(true);
+                showNotification('กำลัง Sync ข้อมูลไป Sheets...', 'info');
+                try {
+                    // 1. ดึงข้อมูลล่าสุดจาก Sheets ก่อน
+                    let sheetsIds = new Set();
+                    let sheetsData = {};
+                    try {
+                        const res = await fetch(`${APPS_SCRIPT_URL}?action=getAllTasks`, { redirect: 'follow' });
+                        if (res.ok) {
+                            const rows = await res.json();
+                            if (Array.isArray(rows)) {
+                                rows.forEach(row => {
+                                    sheetsIds.add(String(row.id));
+                                    const parts = row.date.split('-');
+                                    if (parts.length !== 3) return;
+                                    const [dd, mm, yyyy] = parts;
+                                    const key = `${yyyy}-${parseInt(mm)}-${parseInt(dd)}`;
+                                    if (!sheetsData[key]) sheetsData[key] = [];
+                                    sheetsData[key].push({ id: Number(row.id) || row.id, room: row.room, description: row.description, status: row.status });
+                                });
+                            }
+                        }
+                    } catch(e) {}
+
+                    // 2. อ่าน localStorage
+                    let localData = {};
+                    try {
+                        const raw = localStorage.getItem('mew-tasks-data');
+                        if (raw) localData = JSON.parse(raw);
+                    } catch(e) {}
+
+                    // 3. หา task ที่อยู่ใน local แต่ไม่มีใน Sheets (เช็คด้วย id)
+                    const missingTasks = [];
+                    Object.entries(localData).forEach(([dateKey, dayTasks]) => {
+                        dayTasks.forEach(task => {
+                            if (!sheetsIds.has(String(task.id))) {
+                                missingTasks.push({ dateKey, task });
+                            }
+                        });
+                    });
+
+                    if (missingTasks.length === 0) {
+                        showNotification('✅ ข้อมูลครบแล้ว ไม่มีอะไรตกหล่น', 'success');
+                        setIsSyncing(false);
+                        return;
+                    }
+
+                    // 4. ส่ง task ที่ตกหล่นขึ้น Sheets ทีละรายการ
+                    showNotification(`พบ ${missingTasks.length} รายการที่ตกหล่น กำลังเพิ่ม...`, 'info');
+                    for (const { dateKey, task } of missingTasks) {
+                        await saveTaskToSheets(task, dateKey);
+                    }
+
+                    // 5. merge เข้า state
+                    setTasks(prev => {
+                        const merged = { ...sheetsData };
+                        Object.entries(localData).forEach(([key, dayTasks]) => {
+                            dayTasks.forEach(task => {
+                                if (!sheetsIds.has(String(task.id))) {
+                                    if (!merged[key]) merged[key] = [];
+                                    merged[key].push(task);
+                                }
+                            });
+                        });
+                        return merged;
+                    });
+
+                    showNotification(`✅ Sync สำเร็จ! เพิ่ม ${missingTasks.length} รายการที่ตกหล่น`, 'success');
+                } catch (err) {
+                    showNotification('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+                }
+                setIsSyncing(false);
+            };
             const handleSelectYear = (year) => { setSelectedYear(year); setView('months'); };
             const handleSelectMonth = (month) => { setSelectedMonth(month); setView('days'); };
             const handleSelectDay = (day) => { setSelectedDay(day); setView('tasks'); };
@@ -1061,6 +1128,7 @@
 				setTasks(prevTasks => {
 					let updatedTasks = { ...prevTasks }; // ก๊อปงานทั้งหมดมาเตรียมแก้
 					let addCount = 0;
+					const newTasks = [];
 
 					lines.forEach((line, index) => {
 						const roomRegexJustNumber = /^([0-9A-Za-z-]+)\s+(.+)/;
@@ -1106,16 +1174,15 @@
 							};
 							// เพิ่มงานลงในวันที่สกัดได้ (ต่อท้าย ไม่เรียงห้อง)
 							updatedTasks[targetKey] = [...updatedTasks[targetKey], newTask];
+							newTasks.push({ key: targetKey, task: newTask });
 							addCount++;
 						}
 					});
 
 					if (addCount > 0) {
 						showNotification(`นำเข้าและแยกวันที่สำเร็จ ${addCount} รายการ`, 'success');
-						// ☁️ บันทึกงานที่เพิ่งเพิ่มลง Sheets
-						Object.entries(updatedTasks).forEach(([key, dayTasks]) => {
-							dayTasks.forEach(t => saveTaskToSheets(t, key));
-						});
+						// ☁️ บันทึกเฉพาะงานที่เพิ่งเพิ่ม (newTasks) ลง Sheets เท่านั้น
+						newTasks.forEach(({ key, task }) => saveTaskToSheets(task, key));
 					}
 					return updatedTasks;
 				});

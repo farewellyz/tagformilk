@@ -894,6 +894,8 @@
             };
             const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
 
+            const [isLoadingFromSheets, setIsLoadingFromSheets] = useState(true);
+
             const [tasks, setTasks] = useState(() => {
                 try {
                     const localData = localStorage.getItem('mew-tasks-data');
@@ -903,6 +905,42 @@
                     return {};
                 }
             });
+
+            // ☁️ โหลดข้อมูลทั้งหมดจาก Sheets ทุกครั้งที่เปิดแอป
+            useEffect(() => {
+                const loadFromSheets = async () => {
+                    setIsLoadingFromSheets(true);
+                    try {
+                        const response = await fetch(`${APPS_SCRIPT_URL}?action=getAllTasks`, { redirect: 'follow' });
+                        if (!response.ok) throw new Error('Network response not OK');
+                        const rows = await response.json();
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            // แปลง rows → { "yyyy-m-d": [tasks...] }
+                            const rebuilt = {};
+                            rows.forEach(row => {
+                                // date จาก Sheets เป็น "dd-mm-yyyy"
+                                const parts = row.date.split('-');
+                                if (parts.length !== 3) return;
+                                const [dd, mm, yyyy] = parts;
+                                const key = `${yyyy}-${parseInt(mm)}-${parseInt(dd)}`;
+                                if (!rebuilt[key]) rebuilt[key] = [];
+                                rebuilt[key].push({
+                                    id: row.id,
+                                    room: row.room,
+                                    description: row.description,
+                                    status: row.status
+                                });
+                            });
+                            setTasks(rebuilt);
+                        }
+                    } catch (err) {
+                        console.error('loadFromSheets error:', err);
+                        // ถ้าโหลดไม่ได้ ใช้ข้อมูลจาก localStorage ต่อไป
+                    }
+                    setIsLoadingFromSheets(false);
+                };
+                loadFromSheets();
+            }, []);
             const [frequentTasks, setFrequentTasks] = useState(() => {
                 try {
                     const localData = localStorage.getItem('mew-frequent-tasks-data');
@@ -1204,6 +1242,16 @@
                         />;
                 }
             };
+
+            if (isLoadingFromSheets) {
+                return (
+                    <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center gap-4">
+                        <div className="text-5xl animate-bounce">☁️</div>
+                        <p className="text-xl font-bold text-sky-600 dark:text-amber-400">กำลังโหลดข้อมูลจาก Google Sheets...</p>
+                        <p className="text-slate-400 text-sm">รอแป๊บนึงนะ</p>
+                    </div>
+                );
+            }
 
             return (
                 <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 text-slate-800 dark:text-sky-300 relative">

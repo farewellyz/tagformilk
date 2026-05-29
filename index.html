@@ -46,30 +46,74 @@
           return new Date(year, month, 0).getDate();
         };
 
-        // --- ดึงข้อมูลจาก Google Sheets ---
+        // ============================================================
+        //  🔗 ใส่ URL ของ Apps Script ที่ Deploy ไว้ที่นี่ที่เดียว
+        // ============================================================
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyO4n64qn8XHHdPRAL_b_utqpIV9Q6kJ_Vz1-2lTNGmalugj1bJvmpBL8zM-cp6A6eMDA/exec";
+        // ⚠️  หลังจาก Deploy Apps Script ใหม่แล้ว ให้เปลี่ยน URL ด้านบนด้วย
+
+        // --- ดึงข้อมูลจาก Google Sheets (เดิม — ดึงตามวันที่) ---
         const fetchSheetsData = async (dateString) => {
-			// ⚠️ ตรวจสอบ URL นี้อีกครั้งว่าตรงกับที่ก๊อปมาจากหน้า Deploy หรือไม่
-			const SHEET_URL = "https://script.google.com/macros/s/AKfycbzredBegT4PLwVejdSHn8Xl6RF8xzo2F3ZDOube958DaSTyj4gf10iqJK3Xnv7yl41V/exec"; 
-			
-			try {
-				// เพิ่มโหมด follow เพื่อให้ตามลิงก์ที่ Google Redirect ไป
-				const response = await fetch(`${SHEET_URL}?date=${dateString}`, {
-					redirect: "follow",
-					method: "GET",
-					headers: {
-						"Content-Type": "text/plain;charset=utf-8",
-					},
-				});
-				
-				if (response.ok) {
-					return await response.json();
-				}
-				return null;
-			} catch (error) {
-				console.error("Fetch error:", error);
-				return null;
-			}
-		};
+            try {
+                const response = await fetch(`${APPS_SCRIPT_URL}?date=${dateString}`, { redirect: "follow" });
+                if (response.ok) return await response.json();
+                return null;
+            } catch (error) {
+                console.error("Fetch error:", error);
+                return null;
+            }
+        };
+
+        // --- บันทึก task เดียวลง Sheets (เพิ่ม / แก้ไข / เปลี่ยนสถานะ) ---
+        const saveTaskToSheets = async (task, dateKey) => {
+            // dateKey เช่น "2026-5-27"  → แปลงเป็น "27-05-2026"
+            const [y, m, d] = dateKey.split('-');
+            const dateStr = `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    body: JSON.stringify({
+                        action: "upsertTask",
+                        task: { id: String(task.id), date: dateStr, room: task.room, description: task.description, status: task.status }
+                    })
+                });
+            } catch (err) {
+                console.error("saveTaskToSheets error:", err);
+            }
+        };
+
+        // --- ลบ task ออกจาก Sheets ---
+        const deleteTaskFromSheets = async (taskId) => {
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST",
+                    redirect: "follow",
+                    body: JSON.stringify({ action: "deleteTask", id: String(taskId) })
+                });
+            } catch (err) {
+                console.error("deleteTaskFromSheets error:", err);
+            }
+        };
+
+        // --- Sync ข้อมูลทั้งหมดจาก localStorage → Sheets (ใช้ครั้งเดียวตอนย้าย) ---
+        const syncAllToSheets = async (allTasks) => {
+            const rows = [];
+            Object.entries(allTasks).forEach(([dateKey, dayTasks]) => {
+                const [y, m, d] = dateKey.split('-');
+                const dateStr = `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
+                dayTasks.forEach(task => {
+                    rows.push({ id: String(task.id), date: dateStr, room: task.room, description: task.description, status: task.status });
+                });
+            });
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                redirect: "follow",
+                body: JSON.stringify({ action: "upsertAll", tasks: rows })
+            });
+            const result = await response.json();
+            return result;
+        };
         
         const monthNames = [
           "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -734,7 +778,7 @@
             );
         };
 
-        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary, onSelectTask }) => {
+        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary, onSelectTask, onSyncAll, isSyncing }) => {
             const hasHoldTasks = holdTasksSummary && Object.keys(holdTasksSummary).length > 0;
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
@@ -807,6 +851,18 @@
                             2026
                         </button>
                     </div>
+
+                    {/* ปุ่ม Sync ข้อมูลเดิมไป Google Sheets */}
+                    <div className="mt-8 flex flex-col items-center gap-2">
+                        <button
+                            onClick={onSyncAll}
+                            disabled={isSyncing}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-wait text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95"
+                        >
+                            {isSyncing ? '⏳ กำลัง Sync...' : '📤 Sync ข้อมูลทั้งหมด → Google Sheets'}
+                        </button>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">ใช้ครั้งเดียวเพื่อย้ายข้อมูลเดิมขึ้น Sheets · หลังจากนี้บันทึกอัตโนมัติทุกครั้ง</p>
+                    </div>
                 </div>
             );
         };
@@ -819,6 +875,23 @@
             const [selectedDay, setSelectedDay] = useState(null);
             const [notification, setNotification] = useState(null);
             const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
+            const [isSyncing, setIsSyncing] = useState(false);
+
+            const handleSyncAllToSheets = async () => {
+                setIsSyncing(true);
+                showNotification('กำลัง Sync ข้อมูลไป Sheets...', 'info');
+                try {
+                    const result = await syncAllToSheets(tasks);
+                    if (result && result.success) {
+                        showNotification(`✅ Sync สำเร็จ! ${result.written} รายการ`, 'success');
+                    } else {
+                        showNotification('❌ Sync ไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
+                    }
+                } catch (err) {
+                    showNotification('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+                }
+                setIsSyncing(false);
+            };
             const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
 
             const [tasks, setTasks] = useState(() => {
@@ -939,6 +1012,8 @@
                     const currentDayTasks = prevTasks[taskKey] || [];
                     return { ...prevTasks, [taskKey]: [...currentDayTasks, newTask] };
                 });
+                // ☁️ บันทึกลง Sheets อัตโนมัติ
+                saveTaskToSheets(newTask, taskKey);
             };
 
             const handleBatchAdd = (multiLineText) => {
@@ -999,6 +1074,10 @@
 
 					if (addCount > 0) {
 						showNotification(`นำเข้าและแยกวันที่สำเร็จ ${addCount} รายการ`, 'success');
+						// ☁️ บันทึกงานที่เพิ่งเพิ่มลง Sheets
+						Object.entries(updatedTasks).forEach(([key, dayTasks]) => {
+							dayTasks.forEach(t => saveTaskToSheets(t, key));
+						});
 					}
 					return updatedTasks;
 				});
@@ -1011,6 +1090,8 @@
                     const newDayTasks = currentDayTasks.map(task => task.id === updatedTask.id ? updatedTask : task);
                     return { ...prevTasks, [taskKey]: newDayTasks };
                 });
+                // ☁️ บันทึก/อัปเดตลง Sheets อัตโนมัติ
+                saveTaskToSheets(updatedTask, taskKey);
             };
             
             const handleDeleteTask = (taskId) => {
@@ -1020,6 +1101,8 @@
                     const newDayTasks = currentDayTasks.filter(task => task.id !== taskId);
                     return { ...prevTasks, [taskKey]: newDayTasks };
                 });
+                // ☁️ ลบออกจาก Sheets อัตโนมัติ
+                deleteTaskFromSheets(taskId);
             };
 
             const handleAddFrequentTask = (item) => setFrequentTasks(prev => [...prev, item]);
@@ -1116,6 +1199,8 @@
                             frequentTaskStats={frequentTaskStats}
                             holdTasksSummary={holdTasksSummary}
                             onSelectTask={handleSelectSpecificDate}
+                            onSyncAll={handleSyncAllToSheets}
+                            isSyncing={isSyncing}
                         />;
                 }
             };

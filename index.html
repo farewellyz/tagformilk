@@ -910,17 +910,29 @@
                                 const key = `${yyyy}-${parseInt(mm)}-${parseInt(dd)}`;
                                 if (!rebuilt[key]) rebuilt[key] = [];
                                 rebuilt[key].push({
-                                    id: Number(row.id) || row.id,
+                                    id: String(row.id),
                                     room: row.room,
                                     description: row.description,
                                     status: row.status
                                 });
                             });
-                            // Merge: เอา Sheets เป็นหลัก แต่เก็บวันที่ไม่มีใน Sheets ไว้ (เช่น งานอนาคต)
+                            // Merge by id: เอา Sheets เป็นหลัก + เพิ่ม task ที่มีใน local แต่ไม่มีใน Sheets (ยังไม่ sync)
                             setTasks(prevLocal => {
-                                const merged = { ...prevLocal };
-                                Object.keys(rebuilt).forEach(key => {
-                                    merged[key] = rebuilt[key]; // Sheets ชนะสำหรับวันที่มีข้อมูล
+                                // รวม id ทั้งหมดที่มีใน Sheets
+                                const sheetsIdSet = new Set();
+                                Object.values(rebuilt).forEach(dayTasks =>
+                                    dayTasks.forEach(t => sheetsIdSet.add(String(t.id)))
+                                );
+                                // เริ่มจาก Sheets เป็น base
+                                const merged = { ...rebuilt };
+                                // เพิ่ม task จาก local ที่ไม่มีใน Sheets เข้าไป
+                                Object.entries(prevLocal).forEach(([key, dayTasks]) => {
+                                    dayTasks.forEach(task => {
+                                        if (!sheetsIdSet.has(String(task.id))) {
+                                            if (!merged[key]) merged[key] = [];
+                                            merged[key].push(task);
+                                        }
+                                    });
                                 });
                                 return merged;
                             });
@@ -1045,7 +1057,7 @@
                                     const [dd, mm, yyyy] = parts;
                                     const key = `${yyyy}-${parseInt(mm)}-${parseInt(dd)}`;
                                     if (!sheetsData[key]) sheetsData[key] = [];
-                                    sheetsData[key].push({ id: Number(row.id) || row.id, room: row.room, description: row.description, status: row.status });
+                                    sheetsData[key].push({ id: String(row.id), room: row.room, description: row.description, status: row.status });
                                 });
                             }
                         }
@@ -1167,7 +1179,7 @@
 
 						if (!isDuplicate) {
 							const newTask = { 
-								id: Date.now() + index + Math.random(), 
+								id: Date.now() + index, 
 								room, 
 								description: finalDescription, 
 								status: 'hold' 
@@ -1192,7 +1204,7 @@
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
-                    const newDayTasks = currentDayTasks.map(task => task.id === updatedTask.id ? updatedTask : task);
+                    const newDayTasks = currentDayTasks.map(task => String(task.id) === String(updatedTask.id) ? updatedTask : task);
                     return { ...prevTasks, [taskKey]: newDayTasks };
                 });
                 // ☁️ บันทึก/อัปเดตลง Sheets อัตโนมัติ
@@ -1203,7 +1215,7 @@
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
-                    const newDayTasks = currentDayTasks.filter(task => task.id !== taskId);
+                    const newDayTasks = currentDayTasks.filter(task => String(task.id) !== String(taskId));
                     return { ...prevTasks, [taskKey]: newDayTasks };
                 });
                 // ☁️ ลบออกจาก Sheets อัตโนมัติ

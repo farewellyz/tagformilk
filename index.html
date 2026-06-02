@@ -44,16 +44,41 @@
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
 
-        // "dd-mm-yyyy" → "yyyy-m-d"
+        // ✅ FIX: dateStringToKey — รองรับทุก format ที่ Sheets ส่งมา
+        // รองรับ: "dd-mm-yyyy", "d-m-yyyy", "yyyy-mm-dd", "yyyy-m-d", "dd/mm/yyyy"
         const dateStringToKey = (dateStr) => {
-            const parts = String(dateStr).split('-');
-            if (parts.length !== 3) return null;
-            const [dd, mm, yyyy] = parts;
-            const d = parseInt(dd, 10);
-            const m = parseInt(mm, 10);
-            const y = parseInt(yyyy, 10);
-            if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
-            return `${y}-${m}-${d}`;
+            if (!dateStr) return null;
+            const s = String(dateStr).trim();
+
+            // format: "dd-mm-yyyy" หรือ "d-m-yyyy" (format หลักที่ใช้)
+            const dmyMatch = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+            if (dmyMatch) {
+                const d = parseInt(dmyMatch[1], 10);
+                const m = parseInt(dmyMatch[2], 10);
+                const y = parseInt(dmyMatch[3], 10);
+                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
+            }
+
+            // format: "yyyy-mm-dd" หรือ "yyyy-m-d" (ISO-like)
+            const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (ymdMatch) {
+                const y = parseInt(ymdMatch[1], 10);
+                const m = parseInt(ymdMatch[2], 10);
+                const d = parseInt(ymdMatch[3], 10);
+                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
+            }
+
+            // format: "dd/mm/yyyy"
+            const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (slashMatch) {
+                const d = parseInt(slashMatch[1], 10);
+                const m = parseInt(slashMatch[2], 10);
+                const y = parseInt(slashMatch[3], 10);
+                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
+            }
+
+            console.warn('dateStringToKey: unrecognized format →', s);
+            return null;
         };
 
         // "yyyy-m-d" → "dd-mm-yyyy"
@@ -197,17 +222,25 @@
             } catch(e) {}
         };
 
-        // ✅ FIX: rowsToTaskMap — deduplicate id ภายในวันเดียวกัน
+        // ✅ FIX: rowsToTaskMap — deduplicate id + debug log date format
         const rowsToTaskMap = (rows) => {
             const map = {};
-            const seenIds = new Set(); // ✅ กัน duplicate id ข้ามวัน
+            const seenIds = new Set();
+
+            // ✅ DEBUG: log ตัวอย่าง date format 3 แถวแรก
+            const sampleDates = rows.slice(0, 3).map(r => r.date);
+            console.log('🗓 ตัวอย่าง date format จาก Sheets:', sampleDates);
+
             rows.forEach(row => {
                 if (!row.date || !row.id) return;
                 const nid = normalizeId(row.id);
-                if (!nid || seenIds.has(nid)) return; // ✅ ข้าม duplicate
+                if (!nid || seenIds.has(nid)) return;
                 seenIds.add(nid);
                 const key = dateStringToKey(row.date);
-                if (!key) return;
+                if (!key) {
+                    console.warn('❌ parse date ไม่ได้:', row.date, '→ row:', row);
+                    return;
+                }
                 if (!map[key]) map[key] = [];
                 map[key].push({
                     id: nid,
@@ -216,6 +249,8 @@
                     status: row.status || 'hold'
                 });
             });
+
+            console.log('📦 keys ที่ได้จาก Sheets (5 แรก):', Object.keys(map).slice(0, 5));
             return map;
         };
 

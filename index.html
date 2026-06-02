@@ -95,6 +95,20 @@
                 if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
             }
 
+            // ✅ FIX: JS Date.toString() format จาก Apps Script
+            // เช่น "Thu Mar 05 2026 00:00:00 GMT+0700 (เวลาอินโดจีน)"
+            if (s.includes('GMT') || /^[A-Za-z]{3} [A-Za-z]{3}/.test(s)) {
+                try {
+                    const dt = new Date(s);
+                    if (!isNaN(dt.getTime())) {
+                        const y = dt.getFullYear();
+                        const m = dt.getMonth() + 1;
+                        const d = dt.getDate();
+                        if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
+                    }
+                } catch(e) {}
+            }
+
             console.warn('dateStringToKey: unrecognized format →', s);
             return null;
         };

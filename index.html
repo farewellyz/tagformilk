@@ -7,9 +7,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
     <script>
         if (localStorage.getItem('mew-theme') === 'dark') {
@@ -22,25 +20,31 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
       body { font-family: 'Kanit', sans-serif; }
+      @keyframes fade-in-down {
+        from { opacity: 0; transform: translateY(-10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in-down { animation: fade-in-down 0.3s ease-out; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- Helper Functions ---
+        // ─── Helper Functions ────────────────────────────────────────────────────────
+
         const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
 
-        // แปลง "dd-mm-yyyy" → "yyyy-m-d"
+        // "dd-mm-yyyy" → "yyyy-m-d"
         const dateStringToKey = (dateStr) => {
             const parts = String(dateStr).split('-');
             if (parts.length !== 3) return null;
@@ -52,27 +56,40 @@
             return `${y}-${m}-${d}`;
         };
 
-        // แปลง "yyyy-m-d" → "dd-mm-yyyy"
+        // "yyyy-m-d" → "dd-mm-yyyy"
         const keyToDateString = (dateKey) => {
             const [y, m, d] = dateKey.split('-');
             return `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
         };
 
-        // normalize id กัน scientific notation
+        // ✅ FIX: normalize id — กัน scientific notation (1.78e+12 → "1780298903732")
         const normalizeId = (id) => {
             if (id === null || id === undefined || id === '') return '';
-            const num = Number(id);
-            if (!isNaN(num) && isFinite(num)) return num.toFixed(0);
-            return String(id);
+            const str = String(id).trim();
+            // ถ้าเป็น scientific notation ให้แปลงผ่าน Number แล้ว toFixed(0)
+            if (/^[\d.]+e[+-]?\d+$/i.test(str)) {
+                const num = Number(str);
+                return isFinite(num) ? num.toFixed(0) : str;
+            }
+            // ถ้าเป็นตัวเลขล้วน ให้ trim leading zeros และ decimal ออก
+            const num = Number(str);
+            if (!isNaN(num) && isFinite(num) && str !== '') return num.toFixed(0);
+            return str;
         };
 
-        // ============================================================
-        // JSONP helper — ใช้ script tag injection
-        // ไม่ติด CORS เพราะ script tag follow redirect ได้เองโดย browser
-        // ============================================================
+        // ✅ FIX: generateId — ป้องกัน id ชนกันใน batch add
+        const generateId = (() => {
+            let counter = 0;
+            return () => {
+                counter++;
+                return Date.now() * 1000 + counter;
+            };
+        })();
+
+        // ─── JSONP helper ─────────────────────────────────────────────────────────────
         const fetchViaJsonp = (url) => {
             return new Promise((resolve, reject) => {
-                const cbName = '_mew_cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+                const cbName = '_mew_cb_' + Date.now() + '_' + Math.floor(Math.random() * 99999);
                 const script = document.createElement('script');
                 const timeout = setTimeout(() => {
                     delete window[cbName];
@@ -99,10 +116,6 @@
             });
         };
 
-        // ============================================================
-        // fetchAllFromSheets — ใช้ JSONP เป็น primary เสมอ
-        // เพราะ Google Apps Script ไม่รองรับ CORS header จาก ContentService
-        // ============================================================
         const fetchAllFromSheets = async () => {
             try {
                 console.log('กำลังดึงข้อมูลจาก Sheets via JSONP...');
@@ -119,9 +132,6 @@
             }
         };
 
-        // ============================================================
-        // ✅ FIX: saveTaskToSheets — เพิ่ม keepalive + error handling ดีขึ้น
-        // ============================================================
         const saveTaskToSheets = async (task, dateKey) => {
             const dateStr = keyToDateString(dateKey);
             const body = JSON.stringify({
@@ -135,22 +145,18 @@
                 }
             });
             try {
-                const res = await fetch(APPS_SCRIPT_URL, {
+                await fetch(APPS_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
                     body,
-                    headers: { 'Content-Type': 'text/plain' }, // Apps Script รับ text/plain ได้ดีกว่า application/json
+                    headers: { 'Content-Type': 'text/plain' },
                 });
-                const text = await res.text();
-                console.log('save ok:', task.id, text);
             } catch (err) {
                 console.error("saveTaskToSheets error:", err);
-                // เก็บ queue ไว้ retry ทีหลัง
                 addToRetryQueue({ action: 'upsert', dateKey, task });
             }
         };
 
-        // --- ลบ task ---
         const deleteTaskFromSheets = async (taskId) => {
             try {
                 await fetch(APPS_SCRIPT_URL, {
@@ -164,10 +170,7 @@
             }
         };
 
-        // ============================================================
-        // ✅ NEW: Retry Queue — เก็บงานที่ส่งไม่ได้ไว้ใน localStorage
-        //    แล้ว retry ตอน loadFromSheets หรือตอน sync
-        // ============================================================
+        // ─── Retry Queue ──────────────────────────────────────────────────────────────
         const RETRY_KEY = 'mew-retry-queue';
         const addToRetryQueue = (item) => {
             try {
@@ -194,16 +197,20 @@
             } catch(e) {}
         };
 
-        // แปลง rows จาก Sheets → { dateKey: [tasks] }
+        // ✅ FIX: rowsToTaskMap — deduplicate id ภายในวันเดียวกัน
         const rowsToTaskMap = (rows) => {
             const map = {};
+            const seenIds = new Set(); // ✅ กัน duplicate id ข้ามวัน
             rows.forEach(row => {
                 if (!row.date || !row.id) return;
+                const nid = normalizeId(row.id);
+                if (!nid || seenIds.has(nid)) return; // ✅ ข้าม duplicate
+                seenIds.add(nid);
                 const key = dateStringToKey(row.date);
                 if (!key) return;
                 if (!map[key]) map[key] = [];
                 map[key].push({
-                    id: normalizeId(row.id),
+                    id: nid,
                     room: row.room || 'N/A',
                     description: row.description || '',
                     status: row.status || 'hold'
@@ -211,45 +218,45 @@
             });
             return map;
         };
-        
+
         const monthNames = [
-          "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-          "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+          "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+          "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
         ];
-        
+
         const STATUSES = {
-          hold:    { text: 'Hold',      color: 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100',    hover: 'hover:bg-gray-300 dark:hover:bg-slate-700',       rowColor: 'odd:bg-slate-50/70 even:bg-white dark:bg-slate-800/30', rowHover: 'hover:bg-slate-100 dark:hover:bg-slate-700/50' },
-          pending: { text: 'Pending ?', color: 'bg-yellow-200 text-yellow-800 dark:bg-amber-400 dark:text-amber-900', hover: 'hover:bg-yellow-300 dark:hover:bg-amber-500',     rowColor: 'bg-yellow-100 dark:bg-amber-400/10',                    rowHover: 'hover:bg-yellow-200 dark:hover:bg-amber-400/20' },
-          done:    { text: 'Done ✓',    color: 'bg-emerald-200 text-emerald-800 dark:bg-emerald-500 dark:text-white', hover: 'hover:bg-emerald-300 dark:hover:bg-emerald-600',   rowColor: 'bg-emerald-100 dark:bg-emerald-500/10',                 rowHover: 'hover:bg-emerald-200 dark:hover:bg-emerald-500/20' },
-          cannot:  { text: 'Cannot ✗', color: 'bg-red-200 text-red-800 dark:bg-red-600 dark:text-white',             hover: 'hover:bg-red-300 dark:hover:bg-red-700',           rowColor: 'bg-red-100 dark:bg-red-500/10',                         rowHover: 'hover:bg-red-200 dark:hover:bg-red-500/20' },
+          hold:    { text: 'Hold',      color: 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100',    rowColor: 'odd:bg-slate-50/70 even:bg-white dark:bg-slate-800/30', rowHover: 'hover:bg-slate-100 dark:hover:bg-slate-700/50' },
+          pending: { text: 'Pending ?', color: 'bg-yellow-200 text-yellow-800 dark:bg-amber-400 dark:text-amber-900', rowColor: 'bg-yellow-100 dark:bg-amber-400/10',                    rowHover: 'hover:bg-yellow-200 dark:hover:bg-amber-400/20' },
+          done:    { text: 'Done ✓',    color: 'bg-emerald-200 text-emerald-800 dark:bg-emerald-500 dark:text-white', rowColor: 'bg-emerald-100 dark:bg-emerald-500/10',                 rowHover: 'hover:bg-emerald-200 dark:hover:bg-emerald-500/20' },
+          cannot:  { text: 'Cannot ✗', color: 'bg-red-200 text-red-800 dark:bg-red-600 dark:text-white',             rowColor: 'bg-red-100 dark:bg-red-500/10',                         rowHover: 'hover:bg-red-200 dark:hover:bg-red-500/20' },
         };
         const STATUS_CYCLE = ['hold', 'pending', 'done', 'cannot'];
 
         const DEFAULT_FREQUENT_TASKS = [
-          "ทำความสะอาดฟิลเตอร์แอร์", "ไม้จูงม่านหลุด", "แก้วอล (แก้ไขงานวอลเปเปอร์)",
-          "แอร์กระพริบ", "น้ำรั่ว", "เปลี่ยนถ่านตาชั่ง",
-          "ผนังร้าว", "ไฟตู้ผ้ากระพริบ", "ขัดเคาท์เตอร์ครัว", "น้ำไม่ร้อน"
+          "ทำความสะอาดฟิลเตอร์แอร์","ไม้จูงม่านหลุด","แก้วอล (แก้ไขงานวอลเปเปอร์)",
+          "แอร์กระพริบ","น้ำรั่ว","เปลี่ยนถ่านตาชั่ง",
+          "ผนังร้าว","ไฟตู้ผ้ากระพริบ","ขัดเคาท์เตอร์ครัว","น้ำไม่ร้อน"
         ];
 
-        // --- SVG Icons ---
-        const BackArrowIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg> );
-        const PlusIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg> );
-        const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg> );
-        const EditIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg> );
-        const SearchIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg> );
-        const ExportIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clipRule="evenodd" /><path d="M10 12a1 1 0 100 2 1 1 0 000-2z" /></svg> );
+        // ─── Icons ───────────────────────────────────────────────────────────────────
+        const BackArrowIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>);
+        const PlusIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>);
+        const TrashIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>);
+        const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>);
+        const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>);
+        const ExportIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>);
         const SuccessIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
         const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>);
         const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>);
         const CopyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M4 3a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H4z" /></svg>);
         const SunIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>);
         const MoonIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>);
-        const CloudIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>);
 
         const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-        // --- Components ---
-        const Notification = ({ message, type, onClose }) => {
+        // ─── Components ───────────────────────────────────────────────────────────────
+
+        const Notification = ({ message, onClose }) => {
             useEffect(() => {
                 const timer = setTimeout(() => onClose(), 3000);
                 return () => clearTimeout(timer);
@@ -265,7 +272,7 @@
         const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 animate-fade-in">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full max-w-md m-4 border border-slate-700">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
                         <p className="text-gray-600 dark:text-slate-300 mt-2 mb-8">{message}</p>
@@ -277,7 +284,7 @@
                 </div>
             );
         };
-        
+
         const ManageFrequentTasksModal = ({ isOpen, onClose, frequentTasks, onAdd, onDelete }) => {
             const [newItem, setNewItem] = useState('');
             if (!isOpen) return null;
@@ -292,7 +299,7 @@
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col border border-gray-200 dark:border-slate-700" style={{maxHeight: '80vh'}}>
                         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">จัดการรายการใช้บ่อย</h3>
                         <div className="flex gap-2 mb-4">
-                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} placeholder="เพิ่มรายการใหม่..." className="p-2 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full"/>
+                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="เพิ่มรายการใหม่..." className="p-2 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full"/>
                             <button onClick={handleAdd} className="bg-sky-600 dark:bg-amber-500 hover:bg-sky-700 dark:hover:bg-amber-600 text-white px-4 py-2 rounded-lg">เพิ่ม</button>
                         </div>
                         <div className="flex-grow overflow-y-auto border border-gray-200 dark:border-slate-700 rounded-lg p-2">
@@ -351,7 +358,7 @@
                 };
                 document.addEventListener("mousedown", handleClickOutside);
                 return () => document.removeEventListener("mousedown", handleClickOutside);
-            }, [descriptionWrapperRef]);
+            }, []);
 
             const resetForm = () => {
                 setRoom(''); setDescription(''); setStatus('hold'); setError('');
@@ -364,7 +371,7 @@
                 setError('');
                 const taskData = isEditing
                     ? { ...taskToEdit, room: room.trim() || 'N/A', description: description.trim(), status }
-                    : { id: Date.now(), room: room.trim() || 'N/A', description: description.trim(), status };
+                    : { id: String(generateId()), room: room.trim() || 'N/A', description: description.trim(), status }; // ✅ FIX: ใช้ generateId()
                 onSave(taskData, isEditing);
                 if (!isEditing) resetForm();
             };
@@ -430,7 +437,8 @@
                                 <div ref={suggestionsContainerRef} className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
                                     <ul className="py-1">
                                         {filteredSuggestions.map((suggestion, index) => (
-                                            <li key={index}>
+                                            // ✅ FIX: key ใช้ `${index}-${suggestion}` กัน duplicate suggestion text
+                                            <li key={`${index}-${suggestion}`}>
                                                 <a href="#" onClick={(e) => { e.preventDefault(); handleSuggestionClick(suggestion); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 ${index === highlightedIndex ? 'bg-gray-100 dark:bg-slate-700' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
                                                     {suggestion}
                                                 </a>
@@ -458,19 +466,16 @@
             );
         };
 
-        // ============================================================
-        // ✅ FIX: SyncStatus component — แสดงสถานะการ sync มุมขวาล่าง
-        // ============================================================
         const SyncStatus = ({ status }) => {
             if (!status) return null;
             const colors = {
                 syncing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
                 success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300',
-                error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+                error:   'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
             };
             return (
                 <div className={`fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg ${colors[status.type] || colors.syncing}`}>
-                    {status.type === 'syncing' && <span className="animate-spin">⏳</span>}
+                    {status.type === 'syncing' && <span className="animate-spin inline-block">⏳</span>}
                     {status.type === 'success' && <span>✅</span>}
                     {status.type === 'error' && <span>❌</span>}
                     {status.msg}
@@ -478,6 +483,7 @@
             );
         };
 
+        // ─── TaskView ─────────────────────────────────────────────────────────────────
         const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBatchAdd, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks, suggestionsSource }) => {
             const [taskToEdit, setTaskToEdit] = useState(null);
             const [taskToDelete, setTaskToDelete] = useState(null);
@@ -490,10 +496,7 @@
                     const d = String(day).padStart(2, '0');
                     const m = String(month).padStart(2, '0');
                     const sheetTarget = `${d}-${m}-${year}`;
-                    // ใช้ JSONP เหมือนกัน กัน CORS
-                    const data = await fetchViaJsonp(
-                        `${APPS_SCRIPT_URL}?action=getByDate&date=${sheetTarget}`
-                    );
+                    const data = await fetchViaJsonp(`${APPS_SCRIPT_URL}?action=getByDate&date=${sheetTarget}`);
                     if (data && Array.isArray(data) && data.length > 0) {
                         const textData = data.map(item => {
                             const room = (item.room && item.room.toUpperCase() !== 'N/A') ? item.room.trim() : '';
@@ -510,7 +513,7 @@
                     showNotification('เกิดข้อผิดพลาดในการดึงข้อมูล');
                 }
             };
-                                
+
             const handleSaveTask = (taskData, isEditing) => {
                 if (isEditing) { onUpdateTask(taskData); showNotification('บันทึกการแก้ไขแล้ว'); }
                 else { onAddTask(taskData); showNotification('เพิ่มรายการสำเร็จ'); }
@@ -522,31 +525,37 @@
             };
 
             const handleStatusChange = (task, newStatus) => onUpdateTask({ ...task, status: newStatus });
-            
+
             const handleCopyDescription = (text) => {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.position = "fixed";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(() => showNotification('คัดลอกรายการซ่อมแล้ว!')).catch(() => legacyCopy(text));
+                } else {
+                    legacyCopy(text);
+                }
+            };
+            const legacyCopy = (text) => {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
                 try { document.execCommand('copy'); showNotification('คัดลอกรายการซ่อมแล้ว!'); }
-                catch (err) { showNotification('ไม่สามารถคัดลอกได้'); }
-                document.body.removeChild(textArea);
+                catch { showNotification('ไม่สามารถคัดลอกได้'); }
+                document.body.removeChild(ta);
             };
 
             const sortedAndFilteredTasks = useMemo(() => {
-                let sortedTasks = [...tasksForDay];
+                let sorted = [...tasksForDay];
                 if (sortBy === 'status') {
-                    const statusPriority = { pending: 1, hold: 2, cannot: 3, done: 4 };
-                    sortedTasks.sort((a, b) => statusPriority[a.status] - statusPriority[b.status]);
+                    const p = { pending: 1, hold: 2, cannot: 3, done: 4 };
+                    sorted.sort((a, b) => p[a.status] - p[b.status]);
                 } else if (sortBy === 'room') {
-                    sortedTasks.sort((a, b) => a.room.localeCompare(b.room, undefined, { numeric: true }));
+                    sorted.sort((a, b) => a.room.localeCompare(b.room, undefined, { numeric: true }));
                 }
-                if (!searchTerm) return sortedTasks;
-                return sortedTasks.filter(task =>
-                    task.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    task.description.toLowerCase().includes(searchTerm.toLowerCase())
+                if (!searchTerm) return sorted;
+                return sorted.filter(t =>
+                    t.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    t.description.toLowerCase().includes(searchTerm.toLowerCase())
                 );
             }, [tasksForDay, searchTerm, sortBy]);
 
@@ -554,17 +563,19 @@
                 <div className="p-4 sm:p-6 md:p-8 min-h-screen w-full">
                     <ConfirmationModal isOpen={taskToDelete !== null} onClose={() => setTaskToDelete(null)} onConfirm={handleDeleteConfirm} title="ยืนยันการลบ" message={`คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${taskToDelete?.description}"?`}/>
                     <div className="max-w-7xl mx-auto">
-                        <button onClick={onBack} className="flex items-center bg-white/80 dark:bg-white/10 backdrop-blur-sm hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
-                        <div className="flex items-center justify-center text-center relative mb-6">
+                        <button onClick={onBack} className="flex items-center bg-white/80 dark:bg-white/10 backdrop-blur-sm hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
+                        <div className="flex items-center justify-center text-center relative mb-6 flex-wrap gap-3">
                             <button onClick={handleImportFromSheets} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-lg active:scale-95">
                                 📥 ดึงงานจาก Sheets
                             </button>
-                            <button onClick={onPrevDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronLeftIcon /></button>
-                            <div className="mx-4">
-                                <h2 className="text-3xl font-bold text-gray-800 dark:text-white">วันที่ {day} {monthNames[month - 1]} {year}</h2>
-                                <p className="text-slate-500 dark:text-slate-400 mt-1">บันทึกรายการแท็กงาน</p>
+                            <div className="flex items-center">
+                                <button onClick={onPrevDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronLeftIcon /></button>
+                                <div className="mx-4">
+                                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white">วันที่ {day} {monthNames[month - 1]} {year}</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 mt-1">บันทึกรายการแท็กงาน</p>
+                                </div>
+                                <button onClick={onNextDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronRightIcon /></button>
                             </div>
-                            <button onClick={onNextDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronRightIcon /></button>
                         </div>
                         <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} suggestionsSource={suggestionsSource} onManageFrequentTasks={onManageFrequentTasks} onBatchAdd={onBatchAdd} />
                         <div className="relative z-10 flex-grow">
@@ -605,8 +616,9 @@
                                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                             {sortedAndFilteredTasks.map((task, index) => {
                                                 const statusInfo = STATUSES[task.status] || STATUSES.hold;
+                                                // ✅ FIX: key ใช้ normalizeId เพื่อให้ consistent
                                                 return (
-                                                <tr key={task.id} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
+                                                <tr key={normalizeId(task.id)} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
                                                     <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{index + 1}</td>
                                                     <td className="py-2 px-3 text-slate-900 dark:text-white">{task.room}</td>
                                                     <td className="py-2 px-3 text-slate-600 dark:text-slate-300">{task.description}</td>
@@ -629,13 +641,16 @@
                                                             })}
                                                         </div>
                                                     </td>
-                                                    <td className="py-2 px-3 text-center flex justify-center items-center gap-2">
-                                                        <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-sky-500 dark:hover:text-amber-400 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
-                                                        <button onClick={() => handleCopyDescription(task.description)} className="text-slate-400 hover:text-green-500 dark:hover:text-green-400 p-2 rounded-full transition-colors duration-200"><CopyIcon /></button>
-                                                        <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
+                                                    <td className="py-2 px-3 text-center">
+                                                        <div className="flex justify-center items-center gap-2">
+                                                            <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-sky-500 dark:hover:text-amber-400 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
+                                                            <button onClick={() => handleCopyDescription(task.description)} className="text-slate-400 hover:text-green-500 dark:hover:text-green-400 p-2 rounded-full transition-colors duration-200"><CopyIcon /></button>
+                                                            <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
+                                                        </div>
                                                     </td>
                                                 </tr>
-                                            )})}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -646,6 +661,7 @@
             );
         };
 
+        // ─── DaysView ─────────────────────────────────────────────────────────────────
         const DaysView = ({ year, month, tasks, onSelectDay, onBack, onExport }) => {
             const [searchQuery, setSearchQuery] = useState('');
 
@@ -664,7 +680,7 @@
                 }
                 return results;
             }, [tasks, searchQuery, year, month]);
-            
+
             const monthlySummary = useMemo(() => {
                 const summary = { total: 0, ...Object.fromEntries(STATUS_CYCLE.map(key => [key, 0])) };
                 Object.keys(tasks).forEach(key => {
@@ -678,15 +694,15 @@
                 });
                 return summary;
             }, [tasks, year, month]);
-            
+
             const days = Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1);
 
             return (
                 <div className="p-6 md:p-8 min-h-screen">
                     <div className="max-w-7xl mx-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md"><BackArrowIcon /> กลับ</button>
-                            {monthlySummary.total > 0 && (<button onClick={() => onExport(year, month)} className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-sm"><ExportIcon /> ส่งออกเป็น Excel</button>)}
+                            <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all shadow-md"><BackArrowIcon /> กลับ</button>
+                            {monthlySummary.total > 0 && (<button onClick={() => onExport(year, month)} className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full transition-all shadow-sm"><ExportIcon /> ส่งออกเป็น Excel</button>)}
                         </div>
                         <div className="text-center">
                             <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{monthNames[month - 1]}</h2>
@@ -703,8 +719,9 @@
                                     <div className="space-y-3">
                                         {searchResults.map(task => {
                                             const statusInfo = STATUSES[task.status] || STATUSES.hold;
+                                            // ✅ FIX: key ใช้ normalizeId(task.id) + day กัน duplicate ข้ามวัน
                                             return (
-                                                <div key={task.id} onClick={() => onSelectDay(task.day)} className="p-3 rounded-lg flex justify-between items-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                                <div key={`${normalizeId(task.id)}-${task.day}`} onClick={() => onSelectDay(task.day)} className="p-3 rounded-lg flex justify-between items-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700">
                                                     <div>
                                                         <p className="font-bold text-slate-800 dark:text-white">วันที่ {task.day} - ห้อง: {task.room}</p>
                                                         <p className="text-slate-600 dark:text-slate-300">{task.description}</p>
@@ -736,13 +753,13 @@
                                         let indicator = null;
                                         if (dayTasks && dayTasks.length > 0) {
                                             const allDone = dayTasks.every(task => task.status === 'done');
-                                            if (allDone) {
-                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 leading-none">✓</span>);
-                                            } else {
-                                                indicator = (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 animate-pulse">!</span>);
-                                            }
+                                            indicator = allDone
+                                                ? (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 leading-none">✓</span>)
+                                                : (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 animate-pulse">!</span>);
                                         }
-                                        return (<button key={day} onClick={() => onSelectDay(day)} className="relative bg-white dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg dark:hover:text-amber-400 transform hover:-translate-y-1 border border-slate-200 dark:border-slate-700">{day}{indicator}</button>);
+                                        return (
+                                            <button key={day} onClick={() => onSelectDay(day)} className="relative bg-white dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg dark:hover:text-amber-400 transform hover:-translate-y-1 border border-slate-200 dark:border-slate-700">{day}{indicator}</button>
+                                        );
                                     })}
                                 </div>
                             </>
@@ -752,10 +769,11 @@
             );
         };
 
+        // ─── MonthsView ───────────────────────────────────────────────────────────────
         const MonthsView = ({ year, onSelectMonth, onBack }) => (
             <div className="p-6 md:p-8 min-h-screen">
                 <div className="max-w-7xl mx-auto">
-                    <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 z-10 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
+                    <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all shadow-md mb-4"><BackArrowIcon /> กลับ</button>
                     <div className="text-center">
                         <h2 className="text-3xl font-bold text-slate-800 dark:text-white">เลือกเดือน</h2>
                         <p className="text-slate-500 dark:text-slate-400">ปี {year}</p>
@@ -764,33 +782,40 @@
                         {monthNames.map((name, index) => {
                             const monthNumber = index + 1;
                             const isDisabled = year === 2025 && monthNumber <= 7;
-                            return (<button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled} className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white dark:bg-slate-800 hover:bg-sky-500 dark:hover:bg-slate-700 text-sky-600 dark:text-white border-2 border-sky-500 dark:border-slate-700 transform hover:-translate-y-1 dark:hover:shadow-amber-500/20 dark:hover:border-amber-500'}`}>{name}</button>);
+                            return (
+                                <button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled}
+                                    className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white dark:bg-slate-800 hover:bg-sky-500 dark:hover:bg-slate-700 text-sky-600 dark:text-white border-2 border-sky-500 dark:border-slate-700 transform hover:-translate-y-1 dark:hover:shadow-amber-500/20 dark:hover:border-amber-500'}`}>
+                                    {name}
+                                </button>
+                            );
                         })}
                     </div>
                 </div>
             </div>
         );
 
+        // ─── MainMenu ─────────────────────────────────────────────────────────────────
         const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary, onSelectTask, onSyncAll, isSyncing }) => {
             const hasHoldTasks = holdTasksSummary && Object.keys(holdTasksSummary).length > 0;
             return (
                 <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
                     <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
                     <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">ศูนย์บัญชาการ (Mission Control)</p>
-                    
+
                     <div className="w-full max-w-4xl mx-auto mb-12">
                         <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">งาน Hold ทั้งหมดที่ยังไม่แท็ก</h2>
                         <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-red-200/80 dark:border-slate-700">
                             {hasHoldTasks ? (
                                 <div className="space-y-2 text-left max-h-72 overflow-y-auto p-2">
-                                    {Object.entries(holdTasksSummary).map(([room, tasks]) => (
+                                    {Object.entries(holdTasksSummary).map(([room, roomTasks]) => (
                                         <div key={room} className="p-3 rounded-lg bg-white/50 dark:bg-slate-900/40">
                                             <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
                                                 <span className="text-red-500 mr-2">●</span>ห้อง: {room}
                                             </h3>
                                             <ul className="list-none pl-5 mt-1 space-y-2">
-                                                {tasks.map((task) => (
-                                                    <li key={task.id} onClick={() => onSelectTask(task.year, task.month, task.day)} className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1 hover:bg-sky-100 dark:hover:bg-sky-500/10 cursor-pointer rounded-r-md transition-colors">
+                                                {/* ✅ FIX: key ใช้ normalizeId(task.id) ป้องกัน duplicate */}
+                                                {roomTasks.map((task) => (
+                                                    <li key={normalizeId(task.id)} onClick={() => onSelectTask(task.year, task.month, task.day)} className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1 hover:bg-sky-100 dark:hover:bg-sky-500/10 cursor-pointer rounded-r-md transition-colors">
                                                         {task.description}
                                                         <span className="block text-xs text-slate-400 dark:text-slate-500">วันที่ {task.day} {monthNames[task.month - 1]} {task.year}</span>
                                                     </li>
@@ -813,10 +838,11 @@
                         <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-gray-200/80 dark:border-slate-700 mb-8">
                             {frequentTaskStats.length > 0 ? (
                                 <ol className="space-y-2 text-left">
-                                    {frequentTaskStats.map(([description, count], index) => (
+                                    {frequentTaskStats.map(([description, count]) => (
+                                        // ✅ FIX: key ใช้ description แทน index กัน reorder bug
                                         <li key={description} className="p-3 rounded-lg flex justify-between items-center hover:bg-gray-100 dark:hover:bg-slate-700">
                                             <div className="flex items-center">
-                                                <span className="font-bold text-slate-500 dark:text-slate-400 w-8">{index + 1}.</span>
+                                                <span className="font-bold text-slate-500 dark:text-slate-400 w-8">{frequentTaskStats.findIndex(([d]) => d === description) + 1}.</span>
                                                 <span className="text-slate-800 dark:text-white">{description}</span>
                                             </div>
                                             <span className="font-bold py-1 px-3 rounded-full text-sm bg-sky-100 text-sky-700 dark:bg-amber-400/20 dark:text-amber-300">{count} ครั้ง</span>
@@ -829,9 +855,9 @@
                         </div>
                     </div>
 
-                    <div className="flex gap-4">
-                        <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">2025</button>
-                        <button onClick={() => onSelectYear(2026)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 hover:shadow-sky-500/60 dark:shadow-amber-500/20 dark:hover:shadow-amber-400/40 transform hover:scale-110 transition-all duration-300">2026</button>
+                    <div className="flex gap-4 flex-wrap justify-center">
+                        <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 dark:shadow-amber-500/20 transform hover:scale-110 transition-all duration-300">2025</button>
+                        <button onClick={() => onSelectYear(2026)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 dark:shadow-amber-500/20 transform hover:scale-110 transition-all duration-300">2026</button>
                     </div>
 
                     <div className="mt-8 flex flex-col items-center gap-2">
@@ -844,7 +870,7 @@
             );
         };
 
-
+        // ─── App ──────────────────────────────────────────────────────────────────────
         const App = () => {
             const [view, setView] = useState('main');
             const [selectedYear, setSelectedYear] = useState(null);
@@ -862,45 +888,58 @@
                 try {
                     const localData = localStorage.getItem('mew-tasks-data');
                     return localData ? JSON.parse(localData) : {};
-                } catch (error) {
-                    return {};
-                }
+                } catch { return {}; }
             });
 
-            // ============================================================
-            // ✅ FIX: loadFromSheets — robust merge
-            //    Priority: Sheets = source of truth
-            //    - task ที่อยู่ใน Sheets → ใช้ข้อมูลจาก Sheets
-            //    - task ที่อยู่ใน local แต่ไม่มีใน Sheets → เก็บไว้ (pending upload)
-            //    - ถ้าดึง Sheets ไม่ได้ → ใช้ localStorage ต่อ ไม่ล้างข้อมูล
-            // ============================================================
+            const [frequentTasks, setFrequentTasks] = useState(() => {
+                try {
+                    const localData = localStorage.getItem('mew-frequent-tasks-data');
+                    return localData ? JSON.parse(localData) : DEFAULT_FREQUENT_TASKS;
+                } catch { return DEFAULT_FREQUENT_TASKS; }
+            });
+
+            // ✅ FIX: loadFromSheets — timeout 10 วิ กัน UI บล็อกตลอด + robust merge
             useEffect(() => {
+                let cancelled = false;
+
+                // ✅ FIX: timeout fallback — ถ้าโหลด Sheets นานเกิน 10 วิ ให้ใช้ local ต่อได้เลย
+                const timeoutId = setTimeout(() => {
+                    if (!cancelled) {
+                        console.warn('Sheets load timeout — using local data');
+                        setLoadError('⚠️ โหลดช้า — ใช้ข้อมูล Local');
+                        setIsLoadingFromSheets(false);
+                    }
+                }, 10000);
+
                 const loadFromSheets = async () => {
                     setIsLoadingFromSheets(true);
                     setLoadError(null);
                     try {
-                        // flush retry queue ก่อน
                         await flushRetryQueue();
-
                         const rows = await fetchAllFromSheets();
 
+                        if (cancelled) return;
+
                         if (!Array.isArray(rows)) {
-                            // ดึงไม่ได้ → ใช้ localStorage ต่อ
                             console.warn('ดึง Sheets ไม่ได้ → ใช้ localStorage');
                             setLoadError('⚠️ ออฟไลน์ — แสดงข้อมูลจาก Local');
+                            clearTimeout(timeoutId);
                             setIsLoadingFromSheets(false);
                             return;
                         }
 
                         if (rows.length === 0) {
-                            // Sheets ว่าง → ไม่ทับ local
                             console.log('Sheets ว่าง → คง local ไว้');
+                            clearTimeout(timeoutId);
                             setIsLoadingFromSheets(false);
                             return;
                         }
 
                         const sheetsMap = rowsToTaskMap(rows);
-                        const sheetsIdSet = new Set(rows.map(r => normalizeId(r.id)).filter(Boolean));
+                        // ✅ FIX: สร้าง Set จาก normalizeId ที่ถูกต้อง
+                        const sheetsIdSet = new Set(
+                            rows.map(r => normalizeId(r.id)).filter(Boolean)
+                        );
 
                         setTasks(prevLocal => {
                             const merged = {};
@@ -910,16 +949,15 @@
                                 merged[key] = dayTasks.map(t => ({ ...t }));
                             });
 
-                            // 2. เพิ่ม local task ที่ยังไม่อยู่ใน Sheets (pending upload)
+                            // 2. เพิ่ม local task ที่ยังไม่อยู่ใน Sheets
                             Object.entries(prevLocal).forEach(([key, dayTasks]) => {
                                 dayTasks.forEach(task => {
                                     const nid = normalizeId(task.id);
-                                    if (!sheetsIdSet.has(nid)) {
-                                        if (!merged[key]) merged[key] = [];
-                                        // ป้องกัน duplicate
-                                        const exists = merged[key].some(t => normalizeId(t.id) === nid);
-                                        if (!exists) merged[key].push({ ...task });
-                                    }
+                                    if (!nid || sheetsIdSet.has(nid)) return; // ✅ ข้าม ถ้า Sheets มีแล้ว
+                                    if (!merged[key]) merged[key] = [];
+                                    // ✅ FIX: ตรวจ duplicate ก่อนใส่
+                                    const alreadyIn = merged[key].some(t => normalizeId(t.id) === nid);
+                                    if (!alreadyIn) merged[key].push({ ...task, id: nid });
                                 });
                             });
 
@@ -928,22 +966,20 @@
 
                         console.log(`โหลดจาก Sheets สำเร็จ: ${rows.length} records`);
                     } catch (err) {
-                        console.error('loadFromSheets error:', err);
-                        setLoadError('⚠️ โหลด Sheets ไม่ได้ — ใช้ข้อมูล Local');
+                        if (!cancelled) {
+                            console.error('loadFromSheets error:', err);
+                            setLoadError('⚠️ โหลด Sheets ไม่ได้ — ใช้ข้อมูล Local');
+                        }
                     }
-                    setIsLoadingFromSheets(false);
+                    if (!cancelled) {
+                        clearTimeout(timeoutId);
+                        setIsLoadingFromSheets(false);
+                    }
                 };
-                loadFromSheets();
-            }, []);
 
-            const [frequentTasks, setFrequentTasks] = useState(() => {
-                try {
-                    const localData = localStorage.getItem('mew-frequent-tasks-data');
-                    return localData ? JSON.parse(localData) : DEFAULT_FREQUENT_TASKS;
-                } catch (error) {
-                    return DEFAULT_FREQUENT_TASKS;
-                }
-            });
+                loadFromSheets();
+                return () => { cancelled = true; clearTimeout(timeoutId); };
+            }, []);
 
             const suggestionsSource = useMemo(() => {
                 const allDescriptions = new Set(frequentTasks);
@@ -960,10 +996,6 @@
                 localStorage.setItem('mew-theme', theme);
             }, [theme]);
 
-            // ============================================================
-            // ✅ FIX: บันทึก localStorage ทุกครั้งที่ tasks เปลี่ยน
-            //    เพื่อให้ F5 ยังเห็นข้อมูลล่าสุดระหว่างรอ Sheets โหลด
-            // ============================================================
             useEffect(() => {
                 try {
                     localStorage.setItem('mew-tasks-data', JSON.stringify(tasks));
@@ -980,7 +1012,7 @@
                 });
                 document.title = attentionCount > 0 ? `(${attentionCount}) แท็กงานของมิ้ว` : 'แท็กงานของมิ้ว';
             }, [tasks]);
-            
+
             const holdTasksSummary = useMemo(() => {
                 const holdTasksByRoom = {};
                 Object.entries(tasks).forEach(([dateKey, dayTasks]) => {
@@ -988,7 +1020,12 @@
                     dayTasks.forEach(task => {
                         if (task.status === 'hold') {
                             if (!holdTasksByRoom[task.room]) holdTasksByRoom[task.room] = [];
-                            holdTasksByRoom[task.room].push({ id: task.id, description: task.description, year, month, day });
+                            holdTasksByRoom[task.room].push({
+                                // ✅ FIX: normalize id ใน holdTasksSummary ด้วย
+                                id: normalizeId(task.id),
+                                description: task.description,
+                                year, month, day
+                            });
                         }
                     });
                 });
@@ -997,12 +1034,12 @@
                     if (b === 'N/A') return -1;
                     return a.localeCompare(b, undefined, { numeric: true });
                 });
-                const sortedHoldTasks = {};
-                sortedRooms.forEach(room => { sortedHoldTasks[room] = holdTasksByRoom[room]; });
-                return sortedHoldTasks;
+                const result = {};
+                sortedRooms.forEach(room => { result[room] = holdTasksByRoom[room]; });
+                return result;
             }, [tasks]);
 
-            const showNotification = useCallback((message, type = 'success') => setNotification({ message, type }), []);
+            const showNotification = useCallback((message) => setNotification({ message }), []);
 
             const handleSyncAllToSheets = async () => {
                 setIsSyncing(true);
@@ -1042,8 +1079,9 @@
                     Object.entries(sheetsMap).forEach(([key, dayTasks]) => { merged[key] = [...dayTasks]; });
                     missingTasks.forEach(({ dateKey, task }) => {
                         if (!merged[dateKey]) merged[dateKey] = [];
-                        if (!merged[dateKey].some(t => normalizeId(t.id) === normalizeId(task.id))) {
-                            merged[dateKey].push(task);
+                        const nid = normalizeId(task.id);
+                        if (!merged[dateKey].some(t => normalizeId(t.id) === nid)) {
+                            merged[dateKey].push({ ...task, id: nid });
                         }
                     });
                     setTasks(merged);
@@ -1064,37 +1102,48 @@
             const handleSelectYear = (year) => { setSelectedYear(year); setView('months'); };
             const handleSelectMonth = (month) => { setSelectedMonth(month); setView('days'); };
             const handleSelectDay = (day) => { setSelectedDay(day); setView('tasks'); };
-            
             const handleSelectSpecificDate = (year, month, day) => {
                 setSelectedYear(year); setSelectedMonth(month); setSelectedDay(day); setView('tasks');
             };
 
             const handleAddTask = useCallback((newTask) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                setTasks(prevTasks => {
-                    const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: [...currentDayTasks, newTask] };
+                // ✅ FIX: normalize id ก่อนบันทึก
+                const task = { ...newTask, id: normalizeId(newTask.id) };
+                setTasks(prev => {
+                    const current = prev[taskKey] || [];
+                    // ✅ กัน duplicate ถ้า add ซ้ำ
+                    if (current.some(t => normalizeId(t.id) === task.id)) return prev;
+                    return { ...prev, [taskKey]: [...current, task] };
                 });
-                saveTaskToSheets(newTask, taskKey);
+                saveTaskToSheets(task, taskKey);
             }, [selectedYear, selectedMonth, selectedDay]);
 
+            // ✅ FIX: handleBatchAdd — id ไม่ชนกัน + duplicate check ถูกต้อง
             const handleBatchAdd = useCallback((multiLineText) => {
                 if (!multiLineText.trim()) return;
                 const lines = multiLineText.split('\n').filter(line => line.trim() !== '');
 
                 setTasks(prevTasks => {
-                    let updatedTasks = { ...prevTasks };
-                    let addCount = 0;
-                    const newTasks = [];
+                    const updatedTasks = { ...prevTasks };
+                    // deep clone วันที่เกี่ยวข้องเพื่อกัน mutation
+                    Object.keys(updatedTasks).forEach(k => {
+                        updatedTasks[k] = [...updatedTasks[k]];
+                    });
 
-                    lines.forEach((line, index) => {
-                        const roomRegex = /^([0-9A-Za-z-]+)\s+(.+)/;
+                    let addCount = 0;
+                    const newTasksToSave = [];
+
+                    lines.forEach(line => {
+                        // ✅ FIX: room regex — ต้องขึ้นต้นด้วยตัวเลข/อักษร แล้วตามด้วย space
+                        const roomRegex = /^([0-9A-Za-z/-]+)\s+(.+)/;
                         let room = 'N/A';
                         let description = line.trim();
                         const match = line.match(roomRegex);
                         if (match) { room = match[1]; description = match[2].trim(); }
 
-                        const dateMatch = description.match(/^(\d{1,2})\/(\d{1,2})/);
+                        // ✅ FIX: date regex ต้องตามด้วย space หรือ end เพื่อกัน false match
+                        const dateMatch = description.match(/^(\d{1,2})\/(\d{1,2})(?:\s|$)/);
                         let targetDay = selectedDay;
                         let targetMonth = selectedMonth;
                         let finalDescription = description;
@@ -1104,6 +1153,8 @@
                             finalDescription = description.replace(dateMatch[0], '').trim();
                         }
 
+                        if (!finalDescription) return; // ข้าม line ว่าง
+
                         const targetKey = `${selectedYear}-${targetMonth}-${targetDay}`;
                         if (!updatedTasks[targetKey]) updatedTasks[targetKey] = [];
 
@@ -1112,16 +1163,18 @@
                         );
 
                         if (!isDuplicate) {
-                            const newTask = { id: Date.now() + index, room, description: finalDescription, status: 'hold' };
+                            // ✅ FIX: ใช้ generateId() กัน id ชนกัน
+                            const newTask = { id: String(generateId()), room, description: finalDescription, status: 'hold' };
                             updatedTasks[targetKey] = [...updatedTasks[targetKey], newTask];
-                            newTasks.push({ key: targetKey, task: newTask });
+                            newTasksToSave.push({ key: targetKey, task: newTask });
                             addCount++;
                         }
                     });
 
                     if (addCount > 0) {
                         showNotification(`เพิ่มสำเร็จ ${addCount} รายการ`);
-                        newTasks.forEach(({ key, task }) => saveTaskToSheets(task, key));
+                        // save หลัง state อัปเดต
+                        newTasksToSave.forEach(({ key, task }) => saveTaskToSheets(task, key));
                     }
                     return updatedTasks;
                 });
@@ -1129,18 +1182,20 @@
 
             const handleUpdateTask = useCallback((updatedTask) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                setTasks(prevTasks => {
-                    const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: currentDayTasks.map(task => normalizeId(task.id) === normalizeId(updatedTask.id) ? updatedTask : task) };
+                const task = { ...updatedTask, id: normalizeId(updatedTask.id) };
+                setTasks(prev => {
+                    const current = prev[taskKey] || [];
+                    return { ...prev, [taskKey]: current.map(t => normalizeId(t.id) === task.id ? task : t) };
                 });
-                saveTaskToSheets(updatedTask, taskKey);
+                saveTaskToSheets(task, taskKey);
             }, [selectedYear, selectedMonth, selectedDay]);
-            
+
             const handleDeleteTask = useCallback((taskId) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                setTasks(prevTasks => {
-                    const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: currentDayTasks.filter(task => normalizeId(task.id) !== normalizeId(taskId)) };
+                const nid = normalizeId(taskId);
+                setTasks(prev => {
+                    const current = prev[taskKey] || [];
+                    return { ...prev, [taskKey]: current.filter(t => normalizeId(t.id) !== nid) };
                 });
                 deleteTaskFromSheets(taskId);
             }, [selectedYear, selectedMonth, selectedDay]);
@@ -1157,7 +1212,7 @@
             };
 
             const handleExportCSV = (year, month) => {
-                const headers = ["วันที่", "ห้อง", "รายการซ่อม", "สถานะ"];
+                const headers = ["วันที่","ห้อง","รายการซ่อม","สถานะ"];
                 let csvRows = [headers.join(',')];
                 for (let day = 1; day <= getDaysInMonth(year, month); day++) {
                     const taskKey = `${year}-${month}-${day}`;
@@ -1165,8 +1220,8 @@
                         csvRows.push('');
                         csvRows.push(`"--- วันที่ ${day} ${monthNames[month - 1]} ${year} ---"`);
                         tasks[taskKey].forEach(task => {
-                            const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                            const description = `"${task.description.replace(/"/g, '""')}"`;
+                            const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                            const description = `"${task.description.replace(/"/g,'""')}"`;
                             const status = STATUSES[task.status]?.text || task.status;
                             csvRows.push([date, task.room, description, status].join(','));
                         });
@@ -1175,7 +1230,7 @@
                 const blob = new Blob([`\uFEFF${csvRows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.setAttribute('href', URL.createObjectURL(blob));
-                link.setAttribute('download', `แท็กงาน-${year}-${String(month).padStart(2, '0')}.csv`);
+                link.setAttribute('download', `แท็กงาน-${year}-${String(month).padStart(2,'0')}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1186,30 +1241,31 @@
             const goBackToDays = () => { setView('days'); setSelectedDay(null); };
 
             const frequentTaskStats = useMemo(() => {
-                const descriptionCounts = {};
+                const counts = {};
                 Object.values(tasks).forEach(dayTasks => {
                     dayTasks.forEach(task => {
                         const desc = task.description.trim();
-                        if (desc) descriptionCounts[desc] = (descriptionCounts[desc] || 0) + 1;
+                        if (desc) counts[desc] = (counts[desc] || 0) + 1;
                     });
                 });
-                return Object.entries(descriptionCounts).sort(([, a], [, b]) => b - a).slice(0, 10);
+                return Object.entries(counts).sort(([,a],[,b]) => b - a).slice(0, 10);
             }, [tasks]);
 
             const renderContent = () => {
                 switch (view) {
-                    case 'tasks':
+                    case 'tasks': {
                         const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                         return <TaskView
-                                    year={selectedYear} month={selectedMonth} day={selectedDay}
-                                    tasksForDay={tasks[taskKey] || []}
-                                    onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask}
-                                    onBatchAdd={handleBatchAdd} onBack={goBackToDays}
-                                    onPrevDay={() => handleDateChange(-1)} onNextDay={() => handleDateChange(1)}
-                                    showNotification={showNotification} frequentTasks={frequentTasks}
-                                    onManageFrequentTasks={() => setIsManageFrequentOpen(true)}
-                                    suggestionsSource={suggestionsSource}
-                                />;
+                            year={selectedYear} month={selectedMonth} day={selectedDay}
+                            tasksForDay={tasks[taskKey] || []}
+                            onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask}
+                            onBatchAdd={handleBatchAdd} onBack={goBackToDays}
+                            onPrevDay={() => handleDateChange(-1)} onNextDay={() => handleDateChange(1)}
+                            showNotification={showNotification} frequentTasks={frequentTasks}
+                            onManageFrequentTasks={() => setIsManageFrequentOpen(true)}
+                            suggestionsSource={suggestionsSource}
+                        />;
+                    }
                     case 'days':
                         return <DaysView year={selectedYear} month={selectedMonth} tasks={tasks} onSelectDay={handleSelectDay} onBack={goBackToMonths} onExport={handleExportCSV} />;
                     case 'months':
@@ -1219,25 +1275,20 @@
                 }
             };
 
-            // ============================================================
-            // ✅ FIX: Loading screen — แสดงข้อมูล local ก่อนระหว่างรอ Sheets
-            //    ไม่บล็อก UI ถ้าโหลดนานเกินไป (timeout 8 วิ)
-            // ============================================================
             if (isLoadingFromSheets) {
                 return (
                     <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center gap-4">
                         <div className="text-5xl animate-bounce">☁️</div>
                         <p className="text-xl font-bold text-sky-600 dark:text-amber-400">กำลังโหลดข้อมูลจาก Google Sheets...</p>
-                        <p className="text-slate-400 text-sm">รอแป๊บนึงนะ</p>
+                        <p className="text-slate-400 text-sm">รอแป๊บนึงนะ (หมดเวลา 10 วินาที)</p>
                     </div>
                 );
             }
 
             return (
                 <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 text-slate-800 dark:text-sky-300 relative">
-                    {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+                    {notification && <Notification message={notification.message} onClose={() => setNotification(null)} />}
                     <ManageFrequentTasksModal isOpen={isManageFrequentOpen} onClose={() => setIsManageFrequentOpen(false)} frequentTasks={frequentTasks} onAdd={handleAddFrequentTask} onDelete={handleDeleteFrequentTask} />
-                    {/* แสดงสถานะ offline/sync มุมล่างซ้าย */}
                     {loadError && !syncStatus && (
                         <div className="fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 shadow-lg">
                             {loadError}

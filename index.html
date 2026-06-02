@@ -59,17 +59,20 @@
                 if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
             }
 
-            // ✅ ISO timestamp "2026-02-03T17:00:00.000Z" จาก Google Sheets Date object
-            // UTC 17:00 = Bangkok midnight (00:00 +7) → บวก 7 ชั่วโมงก่อนดึง date
+            // ✅ FIX: ISO timestamp จาก Google Sheets เช่น "2026-05-06T17:00:00.000Z"
+            // Sheets เก็บ date เป็น UTC midnight Bangkok (17:00 UTC = 00:00 BKK+7)
+            // ดึงเฉพาะส่วน date จาก ISO string โดยตรง ไม่ต้องบวก offset
+            // เพราะ "2026-05-06T17:00:00.000Z" หมายถึงวันที่ 6 พ.ค. 2026 ใน BKK
             if (s.includes('T')) {
                 try {
-                    const utcMs = new Date(s).getTime();
-                    if (!isNaN(utcMs)) {
-                        const bkk = new Date(utcMs + 7 * 60 * 60 * 1000);
-                        const y = bkk.getUTCFullYear();
-                        const m = bkk.getUTCMonth() + 1;
-                        const d = bkk.getUTCDate();
-                        return `${y}-${m}-${d}`;
+                    // ดึงแค่ส่วน "yyyy-mm-dd" จาก ISO string ตรงๆ
+                    const datePart = s.split('T')[0]; // "2026-05-06"
+                    const isoMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if (isoMatch) {
+                        const y = parseInt(isoMatch[1], 10);
+                        const m = parseInt(isoMatch[2], 10);
+                        const d = parseInt(isoMatch[3], 10);
+                        if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
                     }
                 } catch(e) {}
             }

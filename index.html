@@ -38,7 +38,7 @@
         // --- Helper Functions ---
         const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
 
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyO4n64qn8XHHdPRAL_b_utqpIV9Q6kJ_Vz1-2lTNGmalugj1bJvmpBL8zM-cp6A6eMDA/exec";
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
 
         // ============================================================
         // ✅ FIX: แปลง date string "dd-mm-yyyy" → dateKey "yyyy-m-d"
@@ -109,6 +109,19 @@
             }
         };
 
+        // ============================================================
+        // ✅ FIX: แปลง id จาก Sheets ให้เป็น string ที่ถูกต้องเสมอ
+        //   รองรับ scientific notation เช่น 1.78e+12 → "1780000000000"
+        //   และ number ปกติ เช่น 1780298903732 → "1780298903732"
+        // ============================================================
+        const normalizeId = (id) => {
+            if (id === null || id === undefined || id === '') return '';
+            const num = Number(id);
+            // ถ้าเป็นตัวเลขที่แปลงได้ (ไม่ใช่ NaN) ให้ใช้ toFixed(0) เพื่อกัน scientific notation
+            if (!isNaN(num) && isFinite(num)) return num.toFixed(0);
+            return String(id);
+        };
+
         // ✅ FIX: แปลง rows จาก Sheets → { dateKey: [tasks] }
         const rowsToTaskMap = (rows) => {
             const map = {};
@@ -118,7 +131,7 @@
                 if (!key) return;
                 if (!map[key]) map[key] = [];
                 map[key].push({
-                    id: String(row.id),
+                    id: normalizeId(row.id),  // ✅ normalize ก่อนเก็บ
                     room: row.room || 'N/A',
                     description: row.description || '',
                     status: row.status || 'hold'
@@ -384,7 +397,7 @@
                     const d = String(day).padStart(2, '0');
                     const m = String(month).padStart(2, '0');
                     const sheetTarget = `${d}-${m}-${year}`;
-                    const scriptUrl = "https://script.google.com/macros/s/AKfycbzHbx5AlpnA32YV1L9tr2xyaFVbdQJY2q3ZqlsyiigPoiYfoUTm7nLUrNhDwCSGVbx8/exec";
+                    const scriptUrl = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
                     const response = await fetch(`${scriptUrl}?date=${sheetTarget}`);
                     const data = await response.json();
                     if (data && data.length > 0) {
@@ -771,7 +784,7 @@
                         const rows = await fetchAllFromSheets();
                         if (Array.isArray(rows) && rows.length > 0) {
                             const sheetsMap = rowsToTaskMap(rows);
-                            const sheetsIdSet = new Set(rows.map(r => String(r.id)));
+                            const sheetsIdSet = new Set(rows.map(r => normalizeId(r.id)));
 
                             setTasks(prevLocal => {
                                 // เริ่มจาก Sheets เป็น base (source of truth)
@@ -783,7 +796,7 @@
                                 // เพิ่ม task จาก local ที่ id ยังไม่อยู่ใน Sheets (ยังไม่ได้ sync)
                                 Object.entries(prevLocal).forEach(([key, dayTasks]) => {
                                     dayTasks.forEach(task => {
-                                        if (!sheetsIdSet.has(String(task.id))) {
+                                        if (!sheetsIdSet.has(normalizeId(task.id))) {
                                             if (!merged[key]) merged[key] = [];
                                             merged[key].push(task);
                                         }
@@ -880,7 +893,7 @@
                     const rows = await fetchAllFromSheets();
                     if (Array.isArray(rows)) {
                         rows.forEach(row => {
-                            sheetsIds.add(String(row.id));
+                            sheetsIds.add(normalizeId(row.id));
                         });
                         sheetsMap = rowsToTaskMap(rows);
                     }
@@ -896,7 +909,7 @@
                     const missingTasks = [];
                     Object.entries(localData).forEach(([dateKey, dayTasks]) => {
                         dayTasks.forEach(task => {
-                            if (!sheetsIds.has(String(task.id))) {
+                            if (!sheetsIds.has(normalizeId(task.id))) {
                                 missingTasks.push({ dateKey, task });
                             }
                         });

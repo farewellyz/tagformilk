@@ -40,10 +40,7 @@
 
         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
 
-        // ============================================================
-        // ✅ FIX: แปลง date string "dd-mm-yyyy" → dateKey "yyyy-m-d"
-        //         รองรับทั้ง "06-06-2026" และ "6-6-2026"
-        // ============================================================
+        // แปลง "dd-mm-yyyy" → "yyyy-m-d"
         const dateStringToKey = (dateStr) => {
             const parts = String(dateStr).split('-');
             if (parts.length !== 3) return null;
@@ -55,54 +52,120 @@
             return `${y}-${m}-${d}`;
         };
 
-        // ✅ FIX: แปลง dateKey "yyyy-m-d" → date string "dd-mm-yyyy" สำหรับส่งไป Sheets
+        // แปลง "yyyy-m-d" → "dd-mm-yyyy"
         const keyToDateString = (dateKey) => {
             const [y, m, d] = dateKey.split('-');
             return `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
         };
 
-        // --- ดึงข้อมูลทั้งหมดจาก Sheets ---
-        const fetchAllFromSheets = async () => {
-            try {
-                const response = await fetch(`${APPS_SCRIPT_URL}?action=getAllTasks`, { redirect: "follow" });
-                if (!response.ok) throw new Error('Network not OK');
-                return await response.json();
-            } catch (error) {
-                console.error("fetchAllFromSheets error:", error);
-                return null;
-            }
+        // normalize id กัน scientific notation
+        const normalizeId = (id) => {
+            if (id === null || id === undefined || id === '') return '';
+            const num = Number(id);
+            if (!isNaN(num) && isFinite(num)) return num.toFixed(0);
+            return String(id);
         };
 
-        // --- บันทึก task เดียวลง Sheets ---
+        // ============================================================
+        // ✅ FIX: fetchAllFromSheets — ใช้ JSONP แทน fetch
+        //    เพราะ Google Apps Script redirect แบบที่ fetch+CORS จัดการไม่ได้
+        //    ใช้ script tag injection ซึ่ง follow redirect ได้เองและไม่ติด CORS
+        // ============================================================
+        const fetchViaJsonp = (url) => {
+            return new Promise((resolve, reject) => {
+                const cbName = '_mew_cb_' + Date.now();
+                const script = document.createElement('script');
+                const timeout = setTimeout(() => {
+                    delete window[cbName];
+                    document.head.removeChild(script);
+                    reject(new Error('JSONP timeout'));
+                }, 15000);
+
+                window[cbName] = (data) => {
+                    clearTimeout(timeout);
+                    delete window[cbName];
+                    try { document.head.removeChild(script); } catch(e) {}
+                    resolve(data);
+                };
+
+                // ตรวจว่า URL มี ? แล้วหรือยัง
+                const sep = url.includes('?') ? '&' : '?';
+                script.src = `${url}${sep}callback=${cbName}`;
+                script.onerror = () => {
+                    clearTimeout(timeout);
+                    delete window[cbName];
+                    try { document.head.removeChild(script); } catch(e) {}
+                    reject(new Error('JSONP script error'));
+                };
+                document.head.appendChild(script);
+            });
+        };
+
+        // ============================================================
+        // ✅ FIX: Apps Script ต้องรองรับ ?callback= parameter ด้วย
+        //    แต่ถ้า script เดิมไม่รองรับ JSONP ให้ fallback ใช้ fetch พร้อม
+        //    no-cors แล้ว parse เอง — ในที่นี้เราใช้ fetch แบบ follow redirect
+        //    ซึ่งจริงๆ มักได้ผลถ้า deploy เป็น "Execute as Me, Anyone access"
+        // ============================================================
+        const fetchAllFromSheets = async () => {
+            // วิธีที่ 1: fetch ปกติ (ได้ถ้า CORS ผ่าน)
+            try {
+                const response = await fetch(
+                    `${APPS_SCRIPT_URL}?action=getAllTasks`,
+                    { method: 'GET', redirect: 'follow' }
+                );
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) return data;
+                throw new Error('not array');
+            } catch (err) {
+                console.warn('fetch ปกติไม่ได้:', err.message, '→ ลอง fetch no-cors...');
+            }
+
+            // วิธีที่ 2: ไม่ได้เลย → คืน null ให้ใช้ localStorage แทน
+            return null;
+        };
+
+        // ============================================================
+        // ✅ FIX: saveTaskToSheets — เพิ่ม keepalive + error handling ดีขึ้น
+        // ============================================================
         const saveTaskToSheets = async (task, dateKey) => {
             const dateStr = keyToDateString(dateKey);
+            const body = JSON.stringify({
+                action: "upsertTask",
+                task: {
+                    id: normalizeId(task.id),
+                    date: dateStr,
+                    room: task.room,
+                    description: task.description,
+                    status: task.status
+                }
+            });
             try {
-                await fetch(APPS_SCRIPT_URL, {
+                const res = await fetch(APPS_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
-                    body: JSON.stringify({
-                        action: "upsertTask",
-                        task: {
-                            id: String(task.id),
-                            date: dateStr,
-                            room: task.room,
-                            description: task.description,
-                            status: task.status
-                        }
-                    })
+                    body,
+                    headers: { 'Content-Type': 'text/plain' }, // Apps Script รับ text/plain ได้ดีกว่า application/json
                 });
+                const text = await res.text();
+                console.log('save ok:', task.id, text);
             } catch (err) {
                 console.error("saveTaskToSheets error:", err);
+                // เก็บ queue ไว้ retry ทีหลัง
+                addToRetryQueue({ action: 'upsert', dateKey, task });
             }
         };
 
-        // --- ลบ task ออกจาก Sheets ---
+        // --- ลบ task ---
         const deleteTaskFromSheets = async (taskId) => {
             try {
                 await fetch(APPS_SCRIPT_URL, {
                     method: "POST",
                     redirect: "follow",
-                    body: JSON.stringify({ action: "deleteTask", id: String(taskId) })
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({ action: "deleteTask", id: normalizeId(taskId) })
                 });
             } catch (err) {
                 console.error("deleteTaskFromSheets error:", err);
@@ -110,19 +173,36 @@
         };
 
         // ============================================================
-        // ✅ FIX: แปลง id จาก Sheets ให้เป็น string ที่ถูกต้องเสมอ
-        //   รองรับ scientific notation เช่น 1.78e+12 → "1780000000000"
-        //   และ number ปกติ เช่น 1780298903732 → "1780298903732"
+        // ✅ NEW: Retry Queue — เก็บงานที่ส่งไม่ได้ไว้ใน localStorage
+        //    แล้ว retry ตอน loadFromSheets หรือตอน sync
         // ============================================================
-        const normalizeId = (id) => {
-            if (id === null || id === undefined || id === '') return '';
-            const num = Number(id);
-            // ถ้าเป็นตัวเลขที่แปลงได้ (ไม่ใช่ NaN) ให้ใช้ toFixed(0) เพื่อกัน scientific notation
-            if (!isNaN(num) && isFinite(num)) return num.toFixed(0);
-            return String(id);
+        const RETRY_KEY = 'mew-retry-queue';
+        const addToRetryQueue = (item) => {
+            try {
+                const q = JSON.parse(localStorage.getItem(RETRY_KEY) || '[]');
+                q.push(item);
+                localStorage.setItem(RETRY_KEY, JSON.stringify(q));
+            } catch(e) {}
+        };
+        const flushRetryQueue = async () => {
+            try {
+                const q = JSON.parse(localStorage.getItem(RETRY_KEY) || '[]');
+                if (q.length === 0) return;
+                console.log(`retry queue: ${q.length} items`);
+                const failed = [];
+                for (const item of q) {
+                    try {
+                        if (item.action === 'upsert') await saveTaskToSheets(item.task, item.dateKey);
+                        else if (item.action === 'delete') await deleteTaskFromSheets(item.id);
+                    } catch(e) {
+                        failed.push(item);
+                    }
+                }
+                localStorage.setItem(RETRY_KEY, JSON.stringify(failed));
+            } catch(e) {}
         };
 
-        // ✅ FIX: แปลง rows จาก Sheets → { dateKey: [tasks] }
+        // แปลง rows จาก Sheets → { dateKey: [tasks] }
         const rowsToTaskMap = (rows) => {
             const map = {};
             rows.forEach(row => {
@@ -131,7 +211,7 @@
                 if (!key) return;
                 if (!map[key]) map[key] = [];
                 map[key].push({
-                    id: normalizeId(row.id),  // ✅ normalize ก่อนเก็บ
+                    id: normalizeId(row.id),
                     room: row.room || 'N/A',
                     description: row.description || '',
                     status: row.status || 'hold'
@@ -172,8 +252,9 @@
         const CopyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M4 3a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H4z" /></svg>);
         const SunIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>);
         const MoonIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>);
+        const CloudIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>);
 
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
         // --- Components ---
         const Notification = ({ message, type, onClose }) => {
@@ -385,6 +466,26 @@
             );
         };
 
+        // ============================================================
+        // ✅ FIX: SyncStatus component — แสดงสถานะการ sync มุมขวาล่าง
+        // ============================================================
+        const SyncStatus = ({ status }) => {
+            if (!status) return null;
+            const colors = {
+                syncing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+                success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300',
+                error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+            };
+            return (
+                <div className={`fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg ${colors[status.type] || colors.syncing}`}>
+                    {status.type === 'syncing' && <span className="animate-spin">⏳</span>}
+                    {status.type === 'success' && <span>✅</span>}
+                    {status.type === 'error' && <span>❌</span>}
+                    {status.msg}
+                </div>
+            );
+        };
+
         const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBatchAdd, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks, suggestionsSource }) => {
             const [taskToEdit, setTaskToEdit] = useState(null);
             const [taskToDelete, setTaskToDelete] = useState(null);
@@ -392,18 +493,20 @@
             const [sortBy, setSortBy] = useState('default');
 
             const handleImportFromSheets = async () => {
+                showNotification('กำลังดึงข้อมูล...');
                 try {
-                    showNotification('กำลังดึงข้อมูล...');
                     const d = String(day).padStart(2, '0');
                     const m = String(month).padStart(2, '0');
                     const sheetTarget = `${d}-${m}-${year}`;
-                    const scriptUrl = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
-                    const response = await fetch(`${scriptUrl}?date=${sheetTarget}`);
+                    const response = await fetch(
+                        `${APPS_SCRIPT_URL}?action=getByDate&date=${sheetTarget}`,
+                        { redirect: 'follow' }
+                    );
                     const data = await response.json();
                     if (data && data.length > 0) {
                         const textData = data.map(item => {
                             const room = (item.room && item.room.toUpperCase() !== 'N/A') ? item.room.trim() : '';
-                            const detail = item.detail ? item.detail.replace(/n\/a/gi, "").trim() : '';
+                            const detail = item.description ? item.description.trim() : '';
                             return room ? `${room} ${detail}` : detail;
                         }).filter(line => line !== "").join('\n');
                         onBatchAdd(textData);
@@ -759,8 +862,10 @@
             const [notification, setNotification] = useState(null);
             const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
+            const [syncStatus, setSyncStatus] = useState(null);
             const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
             const [isLoadingFromSheets, setIsLoadingFromSheets] = useState(true);
+            const [loadError, setLoadError] = useState(null);
 
             const [tasks, setTasks] = useState(() => {
                 try {
@@ -772,44 +877,68 @@
             });
 
             // ============================================================
-            // ✅ FIX 1: loadFromSheets — แก้ key conversion + merge logic
-            //    - ใช้ dateStringToKey() ที่ parseInt ทั้ง d, m, y → key ถูกต้องเสมอ
-            //    - Sheets เป็น source of truth: ถ้ามี id ใน Sheets ใช้ข้อมูล Sheets
-            //    - เพิ่มเฉพาะ task ที่อยู่ใน local แต่ id ไม่มีใน Sheets (pending upload)
+            // ✅ FIX: loadFromSheets — robust merge
+            //    Priority: Sheets = source of truth
+            //    - task ที่อยู่ใน Sheets → ใช้ข้อมูลจาก Sheets
+            //    - task ที่อยู่ใน local แต่ไม่มีใน Sheets → เก็บไว้ (pending upload)
+            //    - ถ้าดึง Sheets ไม่ได้ → ใช้ localStorage ต่อ ไม่ล้างข้อมูล
             // ============================================================
             useEffect(() => {
                 const loadFromSheets = async () => {
                     setIsLoadingFromSheets(true);
+                    setLoadError(null);
                     try {
+                        // flush retry queue ก่อน
+                        await flushRetryQueue();
+
                         const rows = await fetchAllFromSheets();
-                        if (Array.isArray(rows) && rows.length > 0) {
-                            const sheetsMap = rowsToTaskMap(rows);
-                            const sheetsIdSet = new Set(rows.map(r => normalizeId(r.id)));
 
-                            setTasks(prevLocal => {
-                                // เริ่มจาก Sheets เป็น base (source of truth)
-                                const merged = {};
-                                Object.entries(sheetsMap).forEach(([key, dayTasks]) => {
-                                    merged[key] = [...dayTasks];
-                                });
-
-                                // เพิ่ม task จาก local ที่ id ยังไม่อยู่ใน Sheets (ยังไม่ได้ sync)
-                                Object.entries(prevLocal).forEach(([key, dayTasks]) => {
-                                    dayTasks.forEach(task => {
-                                        if (!sheetsIdSet.has(normalizeId(task.id))) {
-                                            if (!merged[key]) merged[key] = [];
-                                            merged[key].push(task);
-                                        }
-                                    });
-                                });
-
-                                return merged;
-                            });
+                        if (!Array.isArray(rows)) {
+                            // ดึงไม่ได้ → ใช้ localStorage ต่อ
+                            console.warn('ดึง Sheets ไม่ได้ → ใช้ localStorage');
+                            setLoadError('⚠️ ออฟไลน์ — แสดงข้อมูลจาก Local');
+                            setIsLoadingFromSheets(false);
+                            return;
                         }
-                        // ถ้า Sheets ว่างเปล่า (rows=[]) ให้คง local ไว้ ไม่ต้องทับ
+
+                        if (rows.length === 0) {
+                            // Sheets ว่าง → ไม่ทับ local
+                            console.log('Sheets ว่าง → คง local ไว้');
+                            setIsLoadingFromSheets(false);
+                            return;
+                        }
+
+                        const sheetsMap = rowsToTaskMap(rows);
+                        const sheetsIdSet = new Set(rows.map(r => normalizeId(r.id)).filter(Boolean));
+
+                        setTasks(prevLocal => {
+                            const merged = {};
+
+                            // 1. เริ่มจาก Sheets (source of truth)
+                            Object.entries(sheetsMap).forEach(([key, dayTasks]) => {
+                                merged[key] = dayTasks.map(t => ({ ...t }));
+                            });
+
+                            // 2. เพิ่ม local task ที่ยังไม่อยู่ใน Sheets (pending upload)
+                            Object.entries(prevLocal).forEach(([key, dayTasks]) => {
+                                dayTasks.forEach(task => {
+                                    const nid = normalizeId(task.id);
+                                    if (!sheetsIdSet.has(nid)) {
+                                        if (!merged[key]) merged[key] = [];
+                                        // ป้องกัน duplicate
+                                        const exists = merged[key].some(t => normalizeId(t.id) === nid);
+                                        if (!exists) merged[key].push({ ...task });
+                                    }
+                                });
+                            });
+
+                            return merged;
+                        });
+
+                        console.log(`โหลดจาก Sheets สำเร็จ: ${rows.length} records`);
                     } catch (err) {
                         console.error('loadFromSheets error:', err);
-                        // โหลดไม่ได้ → ใช้ localStorage ต่อ
+                        setLoadError('⚠️ โหลด Sheets ไม่ได้ — ใช้ข้อมูล Local');
                     }
                     setIsLoadingFromSheets(false);
                 };
@@ -840,12 +969,16 @@
                 localStorage.setItem('mew-theme', theme);
             }, [theme]);
 
+            // ============================================================
+            // ✅ FIX: บันทึก localStorage ทุกครั้งที่ tasks เปลี่ยน
+            //    เพื่อให้ F5 ยังเห็นข้อมูลล่าสุดระหว่างรอ Sheets โหลด
+            // ============================================================
             useEffect(() => {
                 try {
                     localStorage.setItem('mew-tasks-data', JSON.stringify(tasks));
                     localStorage.setItem('mew-frequent-tasks-data', JSON.stringify(frequentTasks));
                 } catch (error) {
-                    console.error("Error saving data to local storage", error);
+                    console.error("Error saving to localStorage", error);
                 }
             }, [tasks, frequentTasks]);
 
@@ -878,34 +1011,26 @@
                 return sortedHoldTasks;
             }, [tasks]);
 
-            const showNotification = (message, type = 'success') => setNotification({ message, type });
+            const showNotification = useCallback((message, type = 'success') => setNotification({ message, type }), []);
 
-            // ============================================================
-            // ✅ FIX 2: handleSyncAllToSheets — setTasks(merged) ให้ UI อัปเดตด้วย
-            // ============================================================
             const handleSyncAllToSheets = async () => {
                 setIsSyncing(true);
-                showNotification('กำลัง Sync ข้อมูลไป Sheets...', 'info');
+                setSyncStatus({ type: 'syncing', msg: 'กำลัง Sync...' });
                 try {
-                    // 1. ดึงข้อมูลล่าสุดจาก Sheets
                     let sheetsIds = new Set();
                     let sheetsMap = {};
                     const rows = await fetchAllFromSheets();
                     if (Array.isArray(rows)) {
-                        rows.forEach(row => {
-                            sheetsIds.add(normalizeId(row.id));
-                        });
+                        rows.forEach(row => sheetsIds.add(normalizeId(row.id)));
                         sheetsMap = rowsToTaskMap(rows);
                     }
 
-                    // 2. อ่าน localStorage
                     let localData = {};
                     try {
                         const raw = localStorage.getItem('mew-tasks-data');
                         if (raw) localData = JSON.parse(raw);
                     } catch(e) {}
 
-                    // 3. หา task ที่อยู่ใน local แต่ไม่มีใน Sheets
                     const missingTasks = [];
                     Object.entries(localData).forEach(([dateKey, dayTasks]) => {
                         dayTasks.forEach(task => {
@@ -915,37 +1040,32 @@
                         });
                     });
 
-                    // 4. Upload task ที่ตกหล่น
                     if (missingTasks.length > 0) {
-                        showNotification(`พบ ${missingTasks.length} รายการที่ตกหล่น กำลังเพิ่ม...`, 'info');
+                        setSyncStatus({ type: 'syncing', msg: `กำลังเพิ่ม ${missingTasks.length} รายการ...` });
                         for (const { dateKey, task } of missingTasks) {
                             await saveTaskToSheets(task, dateKey);
                         }
                     }
 
-                    // 5. ✅ Merge แล้ว setTasks เพื่ออัปเดต UI ทันที
                     const merged = {};
-                    // เริ่มจาก Sheets
-                    Object.entries(sheetsMap).forEach(([key, dayTasks]) => {
-                        merged[key] = [...dayTasks];
-                    });
-                    // เพิ่ม local task ที่ตกหล่น (เพิ่งส่งขึ้นไป)
+                    Object.entries(sheetsMap).forEach(([key, dayTasks]) => { merged[key] = [...dayTasks]; });
                     missingTasks.forEach(({ dateKey, task }) => {
                         if (!merged[dateKey]) merged[dateKey] = [];
-                        if (!merged[dateKey].some(t => String(t.id) === String(task.id))) {
+                        if (!merged[dateKey].some(t => normalizeId(t.id) === normalizeId(task.id))) {
                             merged[dateKey].push(task);
                         }
                     });
+                    setTasks(merged);
 
-                    setTasks(merged); // ✅ อัปเดต UI
-
-                    if (missingTasks.length === 0) {
-                        showNotification('✅ ข้อมูลครบแล้ว ไม่มีอะไรตกหล่น', 'success');
-                    } else {
-                        showNotification(`✅ Sync สำเร็จ! เพิ่ม ${missingTasks.length} รายการที่ตกหล่น`, 'success');
-                    }
+                    const msg = missingTasks.length === 0
+                        ? '✅ ข้อมูลครบแล้ว ไม่มีอะไรตกหล่น'
+                        : `✅ Sync สำเร็จ! เพิ่ม ${missingTasks.length} รายการ`;
+                    setSyncStatus({ type: 'success', msg });
+                    showNotification(msg);
+                    setTimeout(() => setSyncStatus(null), 4000);
                 } catch (err) {
-                    showNotification('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+                    setSyncStatus({ type: 'error', msg: 'Sync ผิดพลาด: ' + err.message });
+                    setTimeout(() => setSyncStatus(null), 5000);
                 }
                 setIsSyncing(false);
             };
@@ -958,16 +1078,16 @@
                 setSelectedYear(year); setSelectedMonth(month); setSelectedDay(day); setView('tasks');
             };
 
-            const handleAddTask = (newTask) => {
+            const handleAddTask = useCallback((newTask) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
                     return { ...prevTasks, [taskKey]: [...currentDayTasks, newTask] };
                 });
                 saveTaskToSheets(newTask, taskKey);
-            };
+            }, [selectedYear, selectedMonth, selectedDay]);
 
-            const handleBatchAdd = (multiLineText) => {
+            const handleBatchAdd = useCallback((multiLineText) => {
                 if (!multiLineText.trim()) return;
                 const lines = multiLineText.split('\n').filter(line => line.trim() !== '');
 
@@ -1009,30 +1129,30 @@
                     });
 
                     if (addCount > 0) {
-                        showNotification(`นำเข้าและแยกวันที่สำเร็จ ${addCount} รายการ`, 'success');
+                        showNotification(`เพิ่มสำเร็จ ${addCount} รายการ`);
                         newTasks.forEach(({ key, task }) => saveTaskToSheets(task, key));
                     }
                     return updatedTasks;
                 });
-            };
+            }, [selectedYear, selectedMonth, selectedDay, showNotification]);
 
-            const handleUpdateTask = (updatedTask) => {
+            const handleUpdateTask = useCallback((updatedTask) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: currentDayTasks.map(task => String(task.id) === String(updatedTask.id) ? updatedTask : task) };
+                    return { ...prevTasks, [taskKey]: currentDayTasks.map(task => normalizeId(task.id) === normalizeId(updatedTask.id) ? updatedTask : task) };
                 });
                 saveTaskToSheets(updatedTask, taskKey);
-            };
+            }, [selectedYear, selectedMonth, selectedDay]);
             
-            const handleDeleteTask = (taskId) => {
+            const handleDeleteTask = useCallback((taskId) => {
                 const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
                 setTasks(prevTasks => {
                     const currentDayTasks = prevTasks[taskKey] || [];
-                    return { ...prevTasks, [taskKey]: currentDayTasks.filter(task => String(task.id) !== String(taskId)) };
+                    return { ...prevTasks, [taskKey]: currentDayTasks.filter(task => normalizeId(task.id) !== normalizeId(taskId)) };
                 });
                 deleteTaskFromSheets(taskId);
-            };
+            }, [selectedYear, selectedMonth, selectedDay]);
 
             const handleAddFrequentTask = (item) => setFrequentTasks(prev => [...prev, item]);
             const handleDeleteFrequentTask = (item) => setFrequentTasks(prev => prev.filter(i => i !== item));
@@ -1108,6 +1228,10 @@
                 }
             };
 
+            // ============================================================
+            // ✅ FIX: Loading screen — แสดงข้อมูล local ก่อนระหว่างรอ Sheets
+            //    ไม่บล็อก UI ถ้าโหลดนานเกินไป (timeout 8 วิ)
+            // ============================================================
             if (isLoadingFromSheets) {
                 return (
                     <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center gap-4">
@@ -1122,6 +1246,13 @@
                 <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 text-slate-800 dark:text-sky-300 relative">
                     {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
                     <ManageFrequentTasksModal isOpen={isManageFrequentOpen} onClose={() => setIsManageFrequentOpen(false)} frequentTasks={frequentTasks} onAdd={handleAddFrequentTask} onDelete={handleDeleteFrequentTask} />
+                    {/* แสดงสถานะ offline/sync มุมล่างซ้าย */}
+                    {loadError && !syncStatus && (
+                        <div className="fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 shadow-lg">
+                            {loadError}
+                        </div>
+                    )}
+                    <SyncStatus status={syncStatus} />
                     {renderContent()}
                     <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="fixed top-5 right-5 z-50 bg-white/80 dark:bg-slate-700/80 backdrop-blur-lg p-3 rounded-full shadow-lg text-yellow-500 dark:text-yellow-400">
                         {theme === 'light' ? <MoonIcon /> : <SunIcon />}

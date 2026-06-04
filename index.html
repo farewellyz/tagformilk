@@ -22,12 +22,12 @@
   --accent-dark: #1565C0;
   --accent-light: #e3f2fd;
   --accent2: #00BCD4;
-  --hold: #f59e0b;
-  --hold-bg: #fffbeb;
-  --hold-border: #fcd34d;
-  --pending: #8b5cf6;
-  --pending-bg: #f5f3ff;
-  --pending-border: #c4b5fd;
+  --hold: #555555;
+  --hold-bg: #e0e0e0;
+  --hold-border: #aaaaaa;
+  --pending: #b45309;
+  --pending-bg: #fef08a;
+  --pending-border: #ca8a04;
   --done: #10b981;
   --done-bg: #ecfdf5;
   --done-border: #6ee7b7;
@@ -496,14 +496,8 @@ const jsonp = (url) => new Promise((resolve, reject) => {
 const fetchAllFromSheets = async () => {
   try {
     const data = await jsonp(`${APPS_SCRIPT_URL}?action=getAllTasks`);
-    if (!Array.isArray(data)) {
-      console.warn('[Sheets] getAllTasks returned non-array:', JSON.stringify(data));
-    }
     return Array.isArray(data) ? data : null;
-  } catch(e) {
-    console.error('[Sheets] fetchAllFromSheets error:', e.message);
-    return null;
-  }
+  } catch(e) { return null; }
 };
 
 const fetchConfigFromSheets = async (key) => {
@@ -1263,12 +1257,11 @@ const App = () => {
         showNotif(`โหลดสำเร็จ ${rows.length} รายการ`);
       } else {
         setSyncStatus('err');
-        showNotif('⚠ ดึงข้อมูลไม่ได้ — ดูรายละเอียดใน Console (F12)');
+        showNotif('ดึงข้อมูลไม่ได้');
       }
     } catch(e) {
-      console.error('[syncFromSheets] caught:', e);
       setSyncStatus('err');
-      showNotif('⚠ เกิดข้อผิดพลาด: ' + e.message);
+      showNotif('เกิดข้อผิดพลาด');
     }
     setLoading(false);
     setTimeout(() => setSyncStatus(null), 3000);

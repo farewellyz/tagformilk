@@ -634,7 +634,7 @@ const SyncStatus = ({ status }) => {
 };
 
 // Task row with inline status cycling
-const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate }) => {
+const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate, showNotif }) => {
   const setStatus = (s) => onStatusChange({ ...task, status: s });
   const rowBg = task.status==='cannot' ? 'rgba(254,180,180,0.6)' : task.status==='done' ? 'rgba(110,231,183,0.3)' : task.status==='pending' ? 'rgba(253,211,77,0.3)' : task.status==='hold' ? 'rgba(180,180,180,0.2)' : 'transparent';
   return (
@@ -650,7 +650,7 @@ const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate }) =
       </div>
       <div className="task-actions" style={{marginLeft:4}}>
         <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => onEdit(task)} title="แก้ไข">✏️</button>
-        <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => onDuplicate(task)} title="คัดลอก">📋</button>
+        <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => { navigator.clipboard.writeText(task.description).then(() => showNotif('คัดลอกข้อความแล้ว')); }} title="คัดลอกข้อความ">📋</button>
         <button className="btn-icon" style={{padding:'4px 6px',fontSize:13,color:'var(--cannot)'}} onClick={() => onDelete(task.id)} title="ลบ">🗑</button>
       </div>
     </div>
@@ -923,6 +923,7 @@ const TaskView = ({ year, month, day, tasks, onAddTask, onUpdateTask, onDeleteTa
               onEdit={setEditTask}
               onDelete={id => setDeleteId(id)}
               onDuplicate={t => { onAddTask({...t, id: generateId()}); showNotif('คัดลอกแล้ว'); }}
+              showNotif={showNotif}
             />
           ))}
         </div>

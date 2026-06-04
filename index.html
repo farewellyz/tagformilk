@@ -482,27 +482,53 @@ const normalizeId = (id) => {
 const generateId = () => crypto.randomUUID();
 
 // ─── Sheets API ───────────────────────────────────────────────────────────────
-const jsonp = (url) => new Promise((resolve, reject) => {
+const jsonp = (url, timeoutMs = 15000) => new Promise((resolve, reject) => {
   const cb = '_mew_'+Date.now()+'_'+Math.random().toString(36).slice(2);
   const s = document.createElement('script');
-  const t = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 20000);
-  window[cb] = (data) => { clearTimeout(t); cleanup(); resolve(data); };
-  s.onerror = () => { clearTimeout(t); cleanup(); reject(new Error('script error')); };
-  s.src = `${url}${url.includes('?')?'&':'?'}callback=${cb}`;
+  let done = false;
+  const t = setTimeout(() => {
+    if (done) return;
+    done = true; cleanup(); reject(new Error('timeout'));
+  }, timeoutMs);
+  window[cb] = (data) => {
+    if (done) return;
+    done = true; clearTimeout(t); cleanup(); resolve(data);
+  };
+  s.onerror = () => {
+    if (done) return;
+    done = true; clearTimeout(t); cleanup(); reject(new Error('script error'));
+  };
+  s.src = `${url}${url.includes('?')?'&':'?'}callback=${cb}&_t=${Date.now()}`;
   document.head.appendChild(s);
   function cleanup() { delete window[cb]; try { document.head.removeChild(s); } catch(e) {} }
 });
 
+const jsonpWithRetry = async (url, retries = 3, delay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await jsonp(url);
+    } catch(e) {
+      console.warn(`[JSONP] attempt ${i+1}/${retries} failed:`, e.message);
+      if (i < retries - 1) await new Promise(r => setTimeout(r, delay));
+      else throw e;
+    }
+  }
+};
+
 const fetchAllFromSheets = async () => {
   try {
-    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getAllTasks`);
+    const data = await jsonpWithRetry(`${APPS_SCRIPT_URL}?action=getAllTasks`);
+    if (!Array.isArray(data)) { console.warn('[Sheets] non-array response:', JSON.stringify(data)); }
     return Array.isArray(data) ? data : null;
-  } catch(e) { return null; }
+  } catch(e) {
+    console.error('[Sheets] fetchAllFromSheets failed after retries:', e.message);
+    return null;
+  }
 };
 
 const fetchConfigFromSheets = async (key) => {
   try {
-    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getConfig&key=${key}`);
+    const data = await jsonpWithRetry(`${APPS_SCRIPT_URL}?action=getConfig&key=${key}`, 2);
     if (data && data.value) return JSON.parse(data.value);
     return null;
   } catch(e) { return null; }

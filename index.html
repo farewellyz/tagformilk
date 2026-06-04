@@ -32,8 +32,8 @@
   --done-bg: #ecfdf5;
   --done-border: #6ee7b7;
   --cannot: #ef4444;
-  --cannot-bg: #fef2f2;
-  --cannot-border: #fca5a5;
+  --cannot-bg: #fee2e2;
+  --cannot-border: #f87171;
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 2px 12px rgba(30,136,229,0.10);
@@ -636,9 +636,9 @@ const SyncStatus = ({ status }) => {
 // Task row with inline status cycling
 const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate }) => {
   const setStatus = (s) => onStatusChange({ ...task, status: s });
-  const rowBg = task.status==='cannot' ? 'rgba(254,242,242,0.7)' : task.status==='done' ? 'rgba(236,253,245,0.5)' : 'transparent';
+  const rowBg = task.status==='cannot' ? 'rgba(254,180,180,0.6)' : task.status==='done' ? 'rgba(110,231,183,0.3)' : task.status==='pending' ? 'rgba(253,211,77,0.3)' : task.status==='hold' ? 'rgba(180,180,180,0.2)' : 'transparent';
   return (
-    <div className="task-row" style={{background:rowBg,opacity:task.status==='done'?0.75:1}}>
+    <div className="task-row" style={{background:rowBg,opacity:1}}>
       <div style={{minWidth:24,fontSize:12,color:'var(--text3)',textAlign:'center'}}>{idx}</div>
       <div className="task-room" style={{minWidth:40}}>{task.room==='N/A'?'N/A':task.room}</div>
       <div className="task-desc" style={{flex:1,fontSize:13}}>{task.description}</div>
@@ -646,7 +646,7 @@ const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate }) =
         <span className="badge badge-hold" style={{cursor:'pointer',opacity:task.status==='hold'?1:0.35,fontSize:11}} onClick={()=>setStatus('hold')}>Hold</span>
         <span className="badge badge-pending" style={{cursor:'pointer',opacity:task.status==='pending'?1:0.35,fontSize:11}} onClick={()=>setStatus('pending')}>Pending?</span>
         <span className="badge badge-done" style={{cursor:'pointer',opacity:task.status==='done'?1:0.35,fontSize:11}} onClick={()=>setStatus('done')}>Done ✓</span>
-        <span className="badge badge-cannot" style={{cursor:'pointer',opacity:task.status==='cannot'?1:0.35,fontSize:11,fontWeight:task.status==='cannot'?700:500}} onClick={()=>setStatus('cannot')}>Cannot ✗</span>
+        <span className="badge badge-cannot" style={{cursor:'pointer',opacity:task.status==='cannot'?1:0.3,fontSize:11,fontWeight:task.status==='cannot'?700:500,background:task.status==='cannot'?'#ef4444':undefined,color:task.status==='cannot'?'#fff':undefined,borderColor:task.status==='cannot'?'#ef4444':undefined}} onClick={()=>setStatus('cannot')}>Cannot ✗</span>
       </div>
       <div className="task-actions" style={{marginLeft:4}}>
         <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => onEdit(task)} title="แก้ไข">✏️</button>
@@ -1409,6 +1409,20 @@ const App = () => {
 
   return (
     <div style={{minHeight:'100vh',position:'relative'}}>
+      {notif && <Notification msg={notif} onClose={()=>setNotif(null)}/>}
+      <SyncStatus status={syncStatus}/>
+      {renderView()}
+      {/* Theme toggle */}
+
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>eight:'100vh',position:'relative'}}>
       {notif && <Notification msg={notif} onClose={()=>setNotif(null)}/>}
       <SyncStatus status={syncStatus}/>
       {renderView()}

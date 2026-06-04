@@ -1,1378 +1,1399 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แท็กงานของมิ้ว</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แท็กงานของมิ้ว</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #dceefb;
+  --surface: #ffffff;
+  --surface2: #eef6fd;
+  --border: #c2ddf5;
+  --text: #1a3a5c;
+  --text2: #5a7a9a;
+  --text3: #9ab8d0;
+  --accent: #1e88e5;
+  --accent-dark: #1565C0;
+  --accent-light: #e3f2fd;
+  --accent2: #00BCD4;
+  --hold: #f59e0b;
+  --hold-bg: #fffbeb;
+  --hold-border: #fcd34d;
+  --pending: #8b5cf6;
+  --pending-bg: #f5f3ff;
+  --pending-border: #c4b5fd;
+  --done: #10b981;
+  --done-bg: #ecfdf5;
+  --done-border: #6ee7b7;
+  --cannot: #ef4444;
+  --cannot-bg: #fef2f2;
+  --cannot-border: #fca5a5;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 12px rgba(30,136,229,0.10);
+  --shadow-lg: 0 8px 32px rgba(30,136,229,0.15);
+}
+/* dark mode removed */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: linear-gradient(160deg, #c8e6fa 0%, #dceefb 40%, #e8f4fd 100%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+#root { min-height: 100vh; }
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
-    <script>
-        if (localStorage.getItem('mew-theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    </script>
+/* Layout */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,0.85);
+  border-bottom: 1px solid rgba(194,221,245,0.6);
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.topbar-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.topbar-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+.page { flex: 1; padding: 16px; max-width: 720px; margin: 0 auto; width: 100%; }
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+/* Cards */
+.card {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(194,221,245,0.5);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card + .card { margin-top: 12px; }
+.card-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(194,221,245,0.4);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.card-body { padding: 16px; }
 
-    <style>
-      body { font-family: 'Kanit', sans-serif; }
-      @keyframes fade-in-down {
-        from { opacity: 0; transform: translateY(-10px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      .animate-fade-in-down { animation: fade-in-down 0.3s ease-out; }
-    </style>
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 14px; font-weight: 500;
+  cursor: pointer; border: none; transition: all 0.15s;
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, #1e88e5, #1565c0); color: #fff; border: none; box-shadow: 0 4px 12px rgba(30,136,229,0.3); }
+.btn-primary:hover { background: linear-gradient(135deg, #1565c0, #0d47a1); box-shadow: 0 6px 16px rgba(30,136,229,0.4); }
+.btn-ghost { background: rgba(255,255,255,0.8); color: var(--text2); border: 1.5px solid rgba(194,221,245,0.8); }
+.btn-ghost:hover { background: rgba(227,242,253,0.6); color: var(--accent); border-color: var(--accent); }
+.btn-danger { background: var(--cannot-bg); color: var(--cannot); border: 1px solid var(--cannot-border); }
+.btn-danger:hover { background: var(--cannot); color: #fff; }
+.btn-sm { padding: 5px 10px; font-size: 13px; }
+.btn-icon { padding: 8px; border-radius: var(--radius-sm); background: transparent; border: 1px solid var(--border); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+.btn-icon:hover { background: var(--surface2); color: var(--text); }
+.btn-icon:active { transform: scale(0.93); }
+
+/* Inputs */
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid rgba(194,221,245,0.8);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.9);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,136,229,0.12); background: #fff; }
+.input::placeholder { color: var(--text3); }
+textarea.input { resize: vertical; min-height: 80px; }
+.input-group { display: flex; gap: 8px; }
+.input-group .input { flex: 1; }
+.label { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 5px; display: block; }
+
+/* Status badges */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.badge:active { transform: scale(0.95); }
+.badge-hold { background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border); }
+.badge-pending { background: var(--pending-bg); color: var(--pending); border-color: var(--pending-border); }
+.badge-done { background: var(--done-bg); color: var(--done); border-color: var(--done-border); }
+.badge-cannot { background: var(--cannot-bg); color: var(--cannot); border-color: var(--cannot-border); }
+
+/* Task rows */
+.task-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(194,221,245,0.4);
+  transition: background 0.12s;
+}
+.task-row:last-child { border-bottom: none; }
+.task-row:hover { background: rgba(227,242,253,0.4); }
+.task-row.done { opacity: 0.65; }
+.task-room {
+  font-weight: 700; font-size: 13px;
+  min-width: 44px;
+  color: var(--accent);
+  padding-top: 1px;
+}
+.task-desc { flex: 1; font-size: 14px; line-height: 1.5; }
+.task-actions { display: flex; gap: 4px; align-items: center; margin-left: 4px; }
+.task-status-btn {
+  background: none; border: none; cursor: pointer; padding: 3px 5px;
+  border-radius: 6px; font-size: 11px; font-weight: 600;
+  transition: all 0.12s; white-space: nowrap;
+}
+
+/* Month/Day grid */
+.grid-months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.grid-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.month-btn, .day-btn {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(194,221,245,0.6);
+  border-radius: var(--radius-sm);
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(30,136,229,0.06);
+}
+.month-btn:hover, .day-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(30,136,229,0.15); }
+.month-btn .month-name { font-size: 15px; font-weight: 600; }
+.month-btn .month-count { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.day-btn { padding: 8px 4px; }
+.day-btn .day-num { font-size: 14px; font-weight: 600; }
+.day-btn .day-count { font-size: 10px; color: var(--text2); }
+.day-btn.has-tasks { border-color: rgba(30,136,229,0.4); }
+.day-btn.has-tasks .day-num { color: var(--accent); }
+.day-btn.has-cannot { position: relative; }
+.day-btn.has-cannot::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 8px; height: 8px; background: var(--cannot); border-radius: 50%; border: 1.5px solid #fff; }
+.day-btn.today { background: var(--accent-light); border-color: var(--accent); }
+.day-btn.today .day-num { color: var(--accent); font-weight: 700; }
+
+/* Nav */
+.nav-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.8); border: 1.5px solid rgba(194,221,245,0.7); cursor: pointer;
+  color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 600;
+  padding: 6px 12px; border-radius: 99px;
+}
+.nav-back:hover { opacity: 0.8; }
+
+/* Date nav */
+.date-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.date-nav-center { text-align: center; }
+.date-nav-title { font-size: 17px; font-weight: 700; }
+.date-nav-sub { font-size: 12px; color: var(--text2); }
+
+/* Stats */
+.stats-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.stat-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid rgba(194,221,245,0.7);
+  background: rgba(255,255,255,0.8);
+}
+
+/* Suggestions */
+.suggestion-list {
+  position: absolute; z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  top: calc(100% + 4px);
+  left: 0;
+}
+.suggestion-item {
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover, .suggestion-item.active { background: var(--accent-light); color: var(--accent); }
+
+/* Search */
+.search-wrap { position: relative; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); }
+
+/* Notification */
+.notif {
+  position: fixed; top: 70px; right: 16px; z-index: 200;
+  background: var(--done-bg); color: var(--done); border: 1px solid var(--done-border);
+  border-radius: var(--radius-sm); padding: 10px 16px;
+  font-size: 14px; font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 0.25s ease;
+}
+.notif.warn {
+  background: var(--hold-bg); color: var(--hold); border-color: var(--hold-border);
+}
+@keyframes slideIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px 16px;
+  width: 100%; max-width: 520px;
+  max-height: 85vh; overflow-y: auto;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 16px; }
+
+/* Sync indicator */
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 5px;
+}
+.sync-dot.syncing { background: var(--hold); animation: pulse 1s infinite; }
+.sync-dot.ok { background: var(--done); }
+.sync-dot.err { background: var(--cannot); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+/* Hold summary */
+.hold-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(194,221,245,0.4);
+  cursor: pointer; transition: background 0.12s;
+}
+.hold-item:last-child { border-bottom: none; }
+.hold-item:hover { background: rgba(227,242,253,0.5); }
+.hold-item-left { flex: 1; }
+.hold-item-date { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.hold-item-desc { font-size: 13px; font-weight: 500; }
+.hold-item-room { font-size: 12px; color: var(--accent); font-weight: 600; }
+
+/* Empty */
+.empty { text-align: center; padding: 40px 16px; color: var(--text2); }
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-text { font-size: 14px; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px 16px; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; padding: 4px; background: rgba(194,221,245,0.3); border-radius: 12px; border: 1px solid rgba(194,221,245,0.5); }
+.tab { flex:1; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: none; border: none; color: var(--text2); font-family: inherit; transition: all 0.15s; text-align: center; }
+.tab.active { background: white; color: var(--accent); box-shadow: 0 2px 8px rgba(30,136,229,0.12); font-weight: 600; }
+
+/* Frequent chip */
+.freq-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 99px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer; transition: all 0.12s;
+  color: var(--text);
+}
+.freq-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.freq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Select */
+select.input { cursor: pointer; }
+
+/* Main menu stats */
+.menu-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-card {
+  background: rgba(255,255,255,0.9); border: 1px solid rgba(194,221,245,0.5); border-radius: var(--radius);
+  padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(30,136,229,0.07);
+}
+.stat-card .num { font-size: 28px; font-weight: 700; }
+.stat-card .lbl { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Utility */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 11px; }
+.text-muted { color: var(--text2); }
+.font-bold { font-weight: 700; }
+.w-full { width: 100%; }
+.relative { position: relative; }
+.overflow-hidden { overflow: hidden; }
+</style>
 </head>
 <body>
-    <div id="root"></div>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-    <script type="text/babel">
-        // ─── Helper Functions ────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
 
-        const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+const MONTH_NAMES = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdE_Vk3cbblfH_eDBqbKfAg5DlRnjvnOfPu-HUyIw0xUUHWbaehDLL2-k7mXfLIBp3CQ/exec";
+const STATUSES = {
+  hold:    { label: 'Hold',    cls: 'badge-hold',    emoji: '⏸' },
+  pending: { label: 'Pending', cls: 'badge-pending', emoji: '🔄' },
+  done:    { label: 'Done',    cls: 'badge-done',    emoji: '✅' },
+  cannot:  { label: 'Cannot', cls: 'badge-cannot',   emoji: '✗' },
+};
+const STATUS_CYCLE = ['hold','pending','done','cannot'];
 
-        // ✅ FIX: dateStringToKey — รองรับทุก format รวม ISO timestamp จาก Google Sheets
-        // Sheets แปลง Date cell เป็น "2026-02-03T17:00:00.000Z" (UTC) → ต้องบวก +7 ก่อน
-        const dateStringToKey = (dateStr) => {
-            if (!dateStr) return null;
-            const s = String(dateStr).trim();
+const DEFAULT_FREQUENT = ["ทำความสะอาดฟิลเตอร์แอร์","ไม้จูงม่านหลุด","แก้วอล","แอร์กระพริบ","น้ำรั่ว","เปลี่ยนถ่านตาชั่ง","ผนังร้าว","ไฟตู้ผ้ากระพริบ","น้ำไม่ร้อน","ซิลิโคนอ่างล้างหน้า"];
 
-            // format: "dd-mm-yyyy" หรือ "d-m-yyyy" (format หลักที่บันทึกไว้)
-            const dmyMatch = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-            if (dmyMatch) {
-                const d = parseInt(dmyMatch[1], 10);
-                const m = parseInt(dmyMatch[2], 10);
-                const y = parseInt(dmyMatch[3], 10);
-                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
-            }
+// ─── Date Helpers ─────────────────────────────────────────────────────────────
+const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
 
-            // ✅ FIX: ISO timestamp จาก Google Sheets เช่น "2026-05-06T17:00:00.000Z"
-            // Sheets เก็บ date เป็น UTC midnight Bangkok (17:00 UTC = 00:00 BKK+7)
-            // ดึงเฉพาะส่วน date จาก ISO string โดยตรง ไม่ต้องบวก offset
-            // เพราะ "2026-05-06T17:00:00.000Z" หมายถึงวันที่ 6 พ.ค. 2026 ใน BKK
-            if (s.includes('T')) {
-                try {
-                    // ดึงแค่ส่วน "yyyy-mm-dd" จาก ISO string ตรงๆ
-                    const datePart = s.split('T')[0]; // "2026-05-06"
-                    const isoMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                    if (isoMatch) {
-                        const y = parseInt(isoMatch[1], 10);
-                        const m = parseInt(isoMatch[2], 10);
-                        const d = parseInt(isoMatch[3], 10);
-                        if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
-                    }
-                } catch(e) {}
-            }
+// Robust date parser — รองรับทุก format ที่ Sheets ส่งมา
+const dateStringToKey = (s) => {
+  if (!s) return null;
+  s = String(s).trim();
 
-            // format: "yyyy-mm-dd" หรือ "yyyy-m-d" (ISO date ไม่มี time)
-            const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-            if (ymdMatch) {
-                const y = parseInt(ymdMatch[1], 10);
-                const m = parseInt(ymdMatch[2], 10);
-                const d = parseInt(ymdMatch[3], 10);
-                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
-            }
+  // "dd-mm-yyyy"
+  let m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m) {
+    const d=+m[1], mo=+m[2], y=+m[3];
+    if (d>=1&&d<=31&&mo>=1&&mo<=12) return `${y}-${mo}-${d}`;
+  }
 
-            // format: "dd/mm/yyyy"
-            const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-            if (slashMatch) {
-                const d = parseInt(slashMatch[1], 10);
-                const m = parseInt(slashMatch[2], 10);
-                const y = parseInt(slashMatch[3], 10);
-                if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
-            }
+  // "dd/mm/yyyy"
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const d=+m[1], mo=+m[2], y=+m[3];
+    if (d>=1&&d<=31&&mo>=1&&mo<=12) return `${y}-${mo}-${d}`;
+  }
 
-            // ✅ FIX: JS Date.toString() format จาก Apps Script
-            // เช่น "Thu Mar 05 2026 00:00:00 GMT+0700 (เวลาอินโดจีน)"
-            if (s.includes('GMT') || /^[A-Za-z]{3} [A-Za-z]{3}/.test(s)) {
-                try {
-                    const dt = new Date(s);
-                    if (!isNaN(dt.getTime())) {
-                        const y = dt.getFullYear();
-                        const m = dt.getMonth() + 1;
-                        const d = dt.getDate();
-                        if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `${y}-${m}-${d}`;
-                    }
-                } catch(e) {}
-            }
+  // ISO "2026-05-06T..." — ดึงแค่ส่วน date ข้างหน้า T
+  if (s.includes('T')) {
+    const part = s.split('T')[0];
+    m = part.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+      const y=+m[1], mo=+m[2], d=+m[3];
+      if (d>=1&&d<=31&&mo>=1&&mo<=12) return `${y}-${mo}-${d}`;
+    }
+  }
 
-            console.warn('dateStringToKey: unrecognized format →', s);
-            return null;
-        };
+  // "yyyy-mm-dd"
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const y=+m[1], mo=+m[2], d=+m[3];
+    if (d>=1&&d<=31&&mo>=1&&mo<=12) return `${y}-${mo}-${d}`;
+  }
 
-        // "yyyy-m-d" → "dd-mm-yyyy"
-        const keyToDateString = (dateKey) => {
-            const [y, m, d] = dateKey.split('-');
-            return `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
-        };
+  // JS Date.toString() เช่น "Thu Mar 05 2026 00:00:00 GMT+0700 (เวลาอินโดจีน)"
+  if (s.includes('GMT') || /^[A-Za-z]{3} [A-Za-z]{3}/.test(s)) {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      return `${dt.getFullYear()}-${dt.getMonth()+1}-${dt.getDate()}`;
+    }
+  }
 
-        // ✅ FIX: normalize id — กัน scientific notation (1.78e+12 → "1780298903732")
-        const normalizeId = (id) => {
-            if (id === null || id === undefined || id === '') return '';
-            const str = String(id).trim();
-            // ถ้าเป็น scientific notation ให้แปลงผ่าน Number แล้ว toFixed(0)
-            if (/^[\d.]+e[+-]?\d+$/i.test(str)) {
-                const num = Number(str);
-                return isFinite(num) ? num.toFixed(0) : str;
-            }
-            // ถ้าเป็นตัวเลขล้วน ให้ trim leading zeros และ decimal ออก
-            const num = Number(str);
-            if (!isNaN(num) && isFinite(num) && str !== '') return num.toFixed(0);
-            return str;
-        };
+  // fallback: ลอง new Date() เลย
+  try {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime()) && dt.getFullYear() > 2000) {
+      return `${dt.getFullYear()}-${dt.getMonth()+1}-${dt.getDate()}`;
+    }
+  } catch(e) {}
 
-        // ✅ FIX: generateId — ป้องกัน id ชนกันใน batch add
-        const generateId = (() => {
-            let counter = 0;
-            return () => {
-                counter++;
-                return Date.now() * 1000 + counter;
-            };
-        })();
+  console.warn('dateStringToKey: unknown format →', s);
+  return null;
+};
 
-        // ─── JSONP helper ─────────────────────────────────────────────────────────────
-        const fetchViaJsonp = (url) => {
-            return new Promise((resolve, reject) => {
-                const cbName = '_mew_cb_' + Date.now() + '_' + Math.floor(Math.random() * 99999);
-                const script = document.createElement('script');
-                const timeout = setTimeout(() => {
-                    delete window[cbName];
-                    try { document.head.removeChild(script); } catch(e) {}
-                    reject(new Error('JSONP timeout'));
-                }, 20000);
+const keyToDisplayDate = (key) => {
+  const [y, mo, d] = key.split('-');
+  return `${String(d).padStart(2,'0')}-${String(mo).padStart(2,'0')}-${y}`;
+};
 
-                window[cbName] = (data) => {
-                    clearTimeout(timeout);
-                    delete window[cbName];
-                    try { document.head.removeChild(script); } catch(e) {}
-                    resolve(data);
-                };
+// เก็บใน Sheets เป็น ISO yyyy-mm-dd เพื่อไม่ให้ JS parse สลับวัน/เดือน
+const keyToDateString = (key) => {
+  const [y, mo, d] = key.split('-');
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+};
 
-                const sep = url.includes('?') ? '&' : '?';
-                script.src = `${url}${sep}callback=${cbName}`;
-                script.onerror = () => {
-                    clearTimeout(timeout);
-                    delete window[cbName];
-                    try { document.head.removeChild(script); } catch(e) {}
-                    reject(new Error('JSONP script error'));
-                };
-                document.head.appendChild(script);
-            });
-        };
+// ─── ID helpers ──────────────────────────────────────────────────────────────
+const normalizeId = (id) => {
+  if (id===null||id===undefined||id==='') return '';
+  const n = Number(String(id).trim());
+  return (isFinite(n)&&!isNaN(n)) ? n.toFixed(0) : String(id).trim();
+};
 
-        const fetchAllFromSheets = async () => {
-            try {
-                console.log('กำลังดึงข้อมูลจาก Sheets via JSONP...');
-                const data = await fetchViaJsonp(`${APPS_SCRIPT_URL}?action=getAllTasks`);
-                if (Array.isArray(data)) {
-                    console.log(`JSONP สำเร็จ: ${data.length} records`);
-                    return data;
-                }
-                console.warn('JSONP ได้ข้อมูลแต่ไม่ใช่ array:', data);
-                return null;
-            } catch (err) {
-                console.error('fetchAllFromSheets JSONP error:', err.message);
-                return null;
-            }
-        };
+const generateId = () => crypto.randomUUID();
 
-        const saveTaskToSheets = async (task, dateKey) => {
-            const dateStr = keyToDateString(dateKey);
-            const body = JSON.stringify({
-                action: "upsertTask",
-                task: {
-                    id: normalizeId(task.id),
-                    date: dateStr,
-                    room: task.room,
-                    description: task.description,
-                    status: task.status
-                }
-            });
-            try {
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST",
-                    redirect: "follow",
-                    body,
-                    headers: { 'Content-Type': 'text/plain' },
-                });
-            } catch (err) {
-                console.error("saveTaskToSheets error:", err);
-                addToRetryQueue({ action: 'upsert', dateKey, task });
-            }
-        };
+// ─── Sheets API ───────────────────────────────────────────────────────────────
+const jsonp = (url) => new Promise((resolve, reject) => {
+  const cb = '_mew_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  const s = document.createElement('script');
+  const t = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 20000);
+  window[cb] = (data) => { clearTimeout(t); cleanup(); resolve(data); };
+  s.onerror = () => { clearTimeout(t); cleanup(); reject(new Error('script error')); };
+  s.src = `${url}${url.includes('?')?'&':'?'}callback=${cb}`;
+  document.head.appendChild(s);
+  function cleanup() { delete window[cb]; try { document.head.removeChild(s); } catch(e) {} }
+});
 
-        const deleteTaskFromSheets = async (taskId) => {
-            try {
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST",
-                    redirect: "follow",
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ action: "deleteTask", id: normalizeId(taskId) })
-                });
-            } catch (err) {
-                console.error("deleteTaskFromSheets error:", err);
-            }
-        };
+const fetchAllFromSheets = async () => {
+  try {
+    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getAllTasks`);
+    return Array.isArray(data) ? data : null;
+  } catch(e) { return null; }
+};
 
-        // ─── Retry Queue ──────────────────────────────────────────────────────────────
-        const RETRY_KEY = 'mew-retry-queue';
-        const addToRetryQueue = (item) => {
-            try {
-                const q = JSON.parse(localStorage.getItem(RETRY_KEY) || '[]');
-                q.push(item);
-                localStorage.setItem(RETRY_KEY, JSON.stringify(q));
-            } catch(e) {}
-        };
-        const flushRetryQueue = async () => {
-            try {
-                const q = JSON.parse(localStorage.getItem(RETRY_KEY) || '[]');
-                if (q.length === 0) return;
-                console.log(`retry queue: ${q.length} items`);
-                const failed = [];
-                for (const item of q) {
-                    try {
-                        if (item.action === 'upsert') await saveTaskToSheets(item.task, item.dateKey);
-                        else if (item.action === 'delete') await deleteTaskFromSheets(item.id);
-                    } catch(e) {
-                        failed.push(item);
-                    }
-                }
-                localStorage.setItem(RETRY_KEY, JSON.stringify(failed));
-            } catch(e) {}
-        };
+const fetchConfigFromSheets = async (key) => {
+  try {
+    const data = await jsonp(`${APPS_SCRIPT_URL}?action=getConfig&key=${key}`);
+    if (data && data.value) return JSON.parse(data.value);
+    return null;
+  } catch(e) { return null; }
+};
 
-        // ✅ FIX: rowsToTaskMap — deduplicate id + debug log date format
-        const rowsToTaskMap = (rows) => {
-            const map = {};
-            const seenIds = new Set();
+const saveConfigToSheets = async (key, value) => {
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'saveConfig', key, value: JSON.stringify(value) })
+    });
+    return true;
+  } catch(e) { return false; }
+};
 
-            // ✅ DEBUG: log ตัวอย่าง date format 3 แถวแรก
-            const sampleDates = rows.slice(0, 3).map(r => r.date);
-            console.log('🗓 ตัวอย่าง date format จาก Sheets:', sampleDates);
+const saveToSheets = async (task, dateKey, onError) => {
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'upsertTask', task: {
+        id: normalizeId(task.id), date: keyToDateString(dateKey),
+        room: task.room, description: task.description, status: task.status
+      }})
+    });
+  } catch(e) {
+    addRetry({ action:'upsert', dateKey, task });
+    if (onError) onError();
+  }
+};
 
-            rows.forEach(row => {
-                if (!row.date || !row.id) return;
-                const nid = normalizeId(row.id);
-                if (!nid || seenIds.has(nid)) return;
-                seenIds.add(nid);
-                const key = dateStringToKey(row.date);
-                if (!key) {
-                    console.warn('❌ parse date ไม่ได้:', row.date, '→ row:', row);
-                    return;
-                }
-                if (!map[key]) map[key] = [];
-                map[key].push({
-                    id: nid,
-                    room: row.room || 'N/A',
-                    description: row.description || '',
-                    status: row.status || 'hold'
-                });
-            });
+const deleteFromSheets = async (taskId, onError) => {
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteTask', id: normalizeId(taskId) })
+    });
+  } catch(e) {
+    addRetry({ action:'delete', id: normalizeId(taskId) });
+    if (onError) onError();
+  }
+};
 
-            console.log('📦 keys ที่ได้จาก Sheets (5 แรก):', Object.keys(map).slice(0, 5));
-            return map;
-        };
+// Retry queue
+const RETRY_KEY = 'mew-retry-v2';
+const addRetry = (item) => {
+  try {
+    const q = JSON.parse(localStorage.getItem(RETRY_KEY)||'[]');
+    q.push(item); localStorage.setItem(RETRY_KEY, JSON.stringify(q));
+  } catch(e) {}
+};
+const flushRetry = async () => {
+  try {
+    const q = JSON.parse(localStorage.getItem(RETRY_KEY)||'[]');
+    if (!q.length) return;
+    const failed = [];
+    for (const item of q) {
+      try {
+        if (item.action==='upsert') await saveToSheets(item.task, item.dateKey);
+        else if (item.action==='delete') await deleteFromSheets(item.id);
+      } catch(e) { failed.push(item); }
+    }
+    localStorage.setItem(RETRY_KEY, JSON.stringify(failed));
+  } catch(e) {}
+};
 
-        const monthNames = [
-          "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
-          "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
-        ];
+// rows → task map
+const rowsToMap = (rows) => {
+  const map = {};
+  const seen = new Set();
+  rows.forEach(row => {
+    if (!row.date||!row.id) return;
+    const nid = normalizeId(row.id);
+    if (!nid||seen.has(nid)) return;
+    seen.add(nid);
+    const key = dateStringToKey(row.date);
+    if (!key) return;
+    if (!map[key]) map[key] = [];
+    map[key].push({ id: nid, room: row.room||'N/A', description: row.description||'', status: row.status||'hold' });
+  });
+  return map;
+};
 
-        const STATUSES = {
-          hold:    { text: 'Hold',      color: 'bg-gray-200 text-gray-800 dark:bg-slate-600 dark:text-slate-100',    rowColor: 'odd:bg-slate-50/70 even:bg-white dark:bg-slate-800/30', rowHover: 'hover:bg-slate-100 dark:hover:bg-slate-700/50' },
-          pending: { text: 'Pending ?', color: 'bg-yellow-200 text-yellow-800 dark:bg-amber-400 dark:text-amber-900', rowColor: 'bg-yellow-100 dark:bg-amber-400/10',                    rowHover: 'hover:bg-yellow-200 dark:hover:bg-amber-400/20' },
-          done:    { text: 'Done ✓',    color: 'bg-emerald-200 text-emerald-800 dark:bg-emerald-500 dark:text-white', rowColor: 'bg-emerald-100 dark:bg-emerald-500/10',                 rowHover: 'hover:bg-emerald-200 dark:hover:bg-emerald-500/20' },
-          cannot:  { text: 'Cannot ✗', color: 'bg-red-200 text-red-800 dark:bg-red-600 dark:text-white',             rowColor: 'bg-red-100 dark:bg-red-500/10',                         rowHover: 'hover:bg-red-200 dark:hover:bg-red-500/20' },
-        };
-        const STATUS_CYCLE = ['hold', 'pending', 'done', 'cannot'];
+// ─── Components ───────────────────────────────────────────────────────────────
 
-        const DEFAULT_FREQUENT_TASKS = [
-          "ทำความสะอาดฟิลเตอร์แอร์","ไม้จูงม่านหลุด","แก้วอล (แก้ไขงานวอลเปเปอร์)",
-          "แอร์กระพริบ","น้ำรั่ว","เปลี่ยนถ่านตาชั่ง",
-          "ผนังร้าว","ไฟตู้ผ้ากระพริบ","ขัดเคาท์เตอร์ครัว","น้ำไม่ร้อน"
-        ];
+const Notification = ({ msg, onClose }) => {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+  const isWarn = msg.startsWith('⚠');
+  return <div className={`notif${isWarn?' warn':''}`}>{isWarn ? msg : `✓ ${msg}`}</div>;
+};
 
-        // ─── Icons ───────────────────────────────────────────────────────────────────
-        const BackArrowIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>);
-        const PlusIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>);
-        const TrashIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>);
-        const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>);
-        const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>);
-        const ExportIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>);
-        const SuccessIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
-        const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>);
-        const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>);
-        const CopyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" /><path d="M4 3a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H4z" /></svg>);
-        const SunIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>);
-        const MoonIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>);
+const SyncStatus = ({ status }) => {
+  if (!status) return null;
+  const map = { syncing: ['syncing','กำลังซิงค์...'], ok: ['ok','ซิงค์แล้ว'], err: ['err','ซิงค์ล้มเหลว'] };
+  const [cls, txt] = map[status]||['syncing',''];
+  return (
+    <div style={{position:'fixed',bottom:16,left:16,zIndex:50,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:99,padding:'5px 12px',fontSize:12,display:'flex',alignItems:'center',boxShadow:'var(--shadow)'}}>
+      <span className={`sync-dot ${cls}`}></span>{txt}
+    </div>
+  );
+};
 
-        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+// Task row with inline status cycling
+const TaskRow = ({ task, idx, onStatusChange, onEdit, onDelete, onDuplicate }) => {
+  const setStatus = (s) => onStatusChange({ ...task, status: s });
+  const rowBg = task.status==='cannot' ? 'rgba(254,242,242,0.7)' : task.status==='done' ? 'rgba(236,253,245,0.5)' : 'transparent';
+  return (
+    <div className="task-row" style={{background:rowBg,opacity:task.status==='done'?0.75:1}}>
+      <div style={{minWidth:24,fontSize:12,color:'var(--text3)',textAlign:'center'}}>{idx}</div>
+      <div className="task-room" style={{minWidth:40}}>{task.room==='N/A'?'N/A':task.room}</div>
+      <div className="task-desc" style={{flex:1,fontSize:13}}>{task.description}</div>
+      <div style={{display:'flex',gap:3,alignItems:'center',flexShrink:0}}>
+        <span className="badge badge-hold" style={{cursor:'pointer',opacity:task.status==='hold'?1:0.35,fontSize:11}} onClick={()=>setStatus('hold')}>Hold</span>
+        <span className="badge badge-pending" style={{cursor:'pointer',opacity:task.status==='pending'?1:0.35,fontSize:11}} onClick={()=>setStatus('pending')}>Pending?</span>
+        <span className="badge badge-done" style={{cursor:'pointer',opacity:task.status==='done'?1:0.35,fontSize:11}} onClick={()=>setStatus('done')}>Done ✓</span>
+        <span className="badge badge-cannot" style={{cursor:'pointer',opacity:task.status==='cannot'?1:0.35,fontSize:11,fontWeight:task.status==='cannot'?700:500}} onClick={()=>setStatus('cannot')}>Cannot ✗</span>
+      </div>
+      <div className="task-actions" style={{marginLeft:4}}>
+        <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => onEdit(task)} title="แก้ไข">✏️</button>
+        <button className="btn-icon" style={{padding:'4px 6px',fontSize:13}} onClick={() => onDuplicate(task)} title="คัดลอก">📋</button>
+        <button className="btn-icon" style={{padding:'4px 6px',fontSize:13,color:'var(--cannot)'}} onClick={() => onDelete(task.id)} title="ลบ">🗑</button>
+      </div>
+    </div>
+  );
+};
 
-        // ─── Components ───────────────────────────────────────────────────────────────
+// Edit modal
+const EditModal = ({ task, onSave, onClose }) => {
+  const [room, setRoom] = useState(task?.room==='N/A'?'':task?.room||'');
+  const [desc, setDesc] = useState(task?.description||'');
+  const [status, setStatus] = useState(task?.status||'hold');
+  const save = () => { if (!desc.trim()) return; onSave({ ...task, room: room.trim()||'N/A', description: desc.trim(), status }); };
+  return (
+    <div className="modal-overlay" onClick={e => e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-handle"></div>
+        <div className="modal-title">{task?.id?'แก้ไขรายการ':'เพิ่มรายการ'}</div>
+        <label className="label">เลขห้อง (ถ้ามี)</label>
+        <input className="input" value={room} onChange={e=>setRoom(e.target.value)} placeholder="เช่น 2316" style={{marginBottom:10}}/>
+        <label className="label">รายการซ่อม *</label>
+        <input className="input" value={desc} onChange={e=>setDesc(e.target.value)} placeholder="รายละเอียดงาน" style={{marginBottom:10}} autoFocus/>
+        <label className="label">สถานะ</label>
+        <select className="input" value={status} onChange={e=>setStatus(e.target.value)} style={{marginBottom:16}}>
+          {STATUS_CYCLE.map(s => <option key={s} value={s}>{STATUSES[s].label}</option>)}
+        </select>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-ghost w-full" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary w-full" onClick={save}>บันทึก</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        const Notification = ({ message, onClose }) => {
-            useEffect(() => {
-                const timer = setTimeout(() => onClose(), 3000);
-                return () => clearTimeout(timer);
-            }, [onClose]);
-            return (
-                <div className="fixed top-24 right-5 z-50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg rounded-xl shadow-2xl p-4 flex items-center animate-fade-in-down border border-gray-200 dark:border-slate-700">
-                    <SuccessIcon />
-                    <p className="text-gray-800 dark:text-white font-semibold">{message}</p>
-                </div>
-            );
-        };
+// Confirm modal
+const ConfirmModal = ({ msg, onConfirm, onClose }) => (
+  <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal">
+      <div className="modal-handle"></div>
+      <div className="modal-title">ยืนยันการลบ?</div>
+      <p style={{color:'var(--text2)',marginBottom:20,fontSize:14}}>{msg}</p>
+      <div style={{display:'flex',gap:8}}>
+        <button className="btn btn-ghost w-full" onClick={onClose}>ยกเลิก</button>
+        <button className="btn btn-danger w-full" onClick={onConfirm}>ลบ</button>
+      </div>
+    </div>
+  </div>
+);
 
-        const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full max-w-md m-4 border border-slate-700">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
-                        <p className="text-gray-600 dark:text-slate-300 mt-2 mb-8">{message}</p>
-                        <div className="flex justify-end gap-4">
-                            <button onClick={onClose} className="py-2 px-5 bg-gray-200 dark:bg-slate-600 dark:hover:bg-slate-700 hover:bg-gray-300 text-gray-800 dark:text-white font-semibold rounded-lg transition-all duration-200">ยกเลิก</button>
-                            <button onClick={onConfirm} className="py-2 px-5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-red-500/30">ยืนยันการลบ</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const ManageFrequentTasksModal = ({ isOpen, onClose, frequentTasks, onAdd, onDelete }) => {
-            const [newItem, setNewItem] = useState('');
-            if (!isOpen) return null;
-            const handleAdd = () => {
-                if (newItem.trim() && !frequentTasks.includes(newItem.trim())) {
-                    onAdd(newItem.trim());
-                    setNewItem('');
-                }
-            };
-            return (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg flex flex-col border border-gray-200 dark:border-slate-700" style={{maxHeight: '80vh'}}>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">จัดการรายการใช้บ่อย</h3>
-                        <div className="flex gap-2 mb-4">
-                            <input type="text" value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="เพิ่มรายการใหม่..." className="p-2 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full"/>
-                            <button onClick={handleAdd} className="bg-sky-600 dark:bg-amber-500 hover:bg-sky-700 dark:hover:bg-amber-600 text-white px-4 py-2 rounded-lg">เพิ่ม</button>
-                        </div>
-                        <div className="flex-grow overflow-y-auto border border-gray-200 dark:border-slate-700 rounded-lg p-2">
-                            {frequentTasks.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md">
-                                    <span className="text-gray-700 dark:text-gray-300">{item}</span>
-                                    <button onClick={() => onDelete(item)} className="text-red-500 hover:text-red-400"><TrashIcon /></button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-end mt-6">
-                            <button onClick={onClose} className="py-2 px-4 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-800 dark:text-white rounded-lg transition-colors">ปิด</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const TaskForm = ({ taskToEdit, onSave, onCancelEdit, onManageFrequentTasks, onBatchAdd, suggestionsSource }) => {
-            const [room, setRoom] = useState('');
-            const [description, setDescription] = useState('');
-            const [status, setStatus] = useState('hold');
-            const [error, setError] = useState('');
-            const [filteredSuggestions, setFilteredSuggestions] = useState([]);
-            const [highlightedIndex, setHighlightedIndex] = useState(-1);
-            const [batchText, setBatchText] = useState('');
-            const isEditing = taskToEdit !== null;
-            const roomInputRef = useRef(null);
-            const descriptionWrapperRef = useRef(null);
-            const suggestionsContainerRef = useRef(null);
-
-            useEffect(() => {
-                if (suggestionsContainerRef.current && highlightedIndex > -1 && filteredSuggestions.length > 0) {
-                    const activeItem = suggestionsContainerRef.current.querySelector(`li:nth-child(${highlightedIndex + 1})`);
-                    if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                }
-            }, [highlightedIndex, filteredSuggestions]);
-
-            useEffect(() => {
-                if (taskToEdit) {
-                    setRoom(taskToEdit.room === 'N/A' ? '' : taskToEdit.room);
-                    setDescription(taskToEdit.description);
-                    setStatus(taskToEdit.status);
-                    setError('');
-                } else {
-                    setRoom(''); setDescription(''); setStatus('hold'); setError('');
-                }
-                setTimeout(() => { if (roomInputRef.current) roomInputRef.current.focus(); }, 100);
-            }, [taskToEdit]);
-
-            useEffect(() => {
-                const handleClickOutside = (event) => {
-                    if (descriptionWrapperRef.current && !descriptionWrapperRef.current.contains(event.target)) {
-                        setFilteredSuggestions([]);
-                    }
-                };
-                document.addEventListener("mousedown", handleClickOutside);
-                return () => document.removeEventListener("mousedown", handleClickOutside);
-            }, []);
-
-            const resetForm = () => {
-                setRoom(''); setDescription(''); setStatus('hold'); setError('');
-                if (isEditing) { onCancelEdit(); } else { roomInputRef.current?.focus(); }
-            };
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (!description.trim()) { setError('กรุณาใส่รายการซ่อม'); return; }
-                setError('');
-                const taskData = isEditing
-                    ? { ...taskToEdit, room: room.trim() || 'N/A', description: description.trim(), status }
-                    : { id: String(generateId()), room: room.trim() || 'N/A', description: description.trim(), status }; // ✅ FIX: ใช้ generateId()
-                onSave(taskData, isEditing);
-                if (!isEditing) resetForm();
-            };
-
-            const handleBatchAddClick = () => {
-                if (batchText.trim()) { onBatchAdd(batchText); setBatchText(''); }
-            };
-
-            const handleDescriptionChange = (e) => {
-                const value = e.target.value;
-                setDescription(value);
-                setHighlightedIndex(-1);
-                if (value.trim()) {
-                    const lower = value.toLowerCase();
-                    const suggestions = suggestionsSource
-                        .filter(s => s.toLowerCase().includes(lower) && s.toLowerCase() !== lower)
-                        .slice(0, 10);
-                    setFilteredSuggestions(suggestions);
-                } else {
-                    setFilteredSuggestions([]);
-                }
-            };
-
-            const handleSuggestionClick = (suggestion) => {
-                setDescription(suggestion);
-                setFilteredSuggestions([]);
-            };
-
-            const handleKeyDown = (e) => {
-                if (filteredSuggestions.length === 0) return;
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setHighlightedIndex(prev => prev < filteredSuggestions.length - 1 ? prev + 1 : -1);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setHighlightedIndex(prev => prev > 0 ? prev - 1 : prev === 0 ? -1 : filteredSuggestions.length - 1);
-                } else if (e.key === 'Enter') {
-                    if (highlightedIndex > -1) {
-                        e.preventDefault();
-                        if (filteredSuggestions[highlightedIndex]) handleSuggestionClick(filteredSuggestions[highlightedIndex]);
-                    }
-                } else if (e.key === 'Escape') {
-                    setFilteredSuggestions([]);
-                }
-            };
-
-            return (
-                <form onSubmit={handleSubmit} className="relative z-20 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-gray-200/80 dark:border-slate-700 shadow-lg shadow-gray-400/10 dark:shadow-black/20">
-                    <div className="mb-4 p-4 border border-dashed border-slate-400 dark:border-slate-600 rounded-lg">
-                        <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2">วางหลายรายการจาก LINE ที่นี่ (Batch Add)</label>
-                        <textarea value={batchText} onChange={(e) => setBatchText(e.target.value)} className="p-2 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white rounded-lg w-full" placeholder={"501 แอร์ไม่เย็น\n503 ก๊อกน้ำรั่ว"} rows="3"></textarea>
-                        <button type="button" onClick={handleBatchAddClick} className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg">เพิ่มหลายรายการ</button>
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-5 border-t border-slate-200 dark:border-slate-700 pt-4">{isEditing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่ (ทีละรายการ)'}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <input ref={roomInputRef} type="text" placeholder="เลขห้อง (ถ้ามี)" value={room} onChange={(e) => setRoom(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-all duration-200" />
-                        <div className="relative md:col-span-2" ref={descriptionWrapperRef}>
-                            <input type="text" placeholder="* รายการซ่อม (พิมพ์เพื่อค้นหา)" value={description} onChange={handleDescriptionChange} onFocus={handleDescriptionChange} onKeyDown={handleKeyDown} autoComplete="off" className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none transition-shadow w-full" />
-                            <div className="absolute top-1/2 right-3 transform -translate-y-1/2 flex gap-2">
-                                <button type="button" onClick={onManageFrequentTasks} className="text-sm bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-1 px-3 rounded-md">จัดการ</button>
-                            </div>
-                            {filteredSuggestions.length > 0 && (
-                                <div ref={suggestionsContainerRef} className="absolute z-30 mt-2 w-full bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-h-48 overflow-y-auto">
-                                    <ul className="py-1">
-                                        {filteredSuggestions.map((suggestion, index) => (
-                                            // ✅ FIX: key ใช้ `${index}-${suggestion}` กัน duplicate suggestion text
-                                            <li key={`${index}-${suggestion}`}>
-                                                <a href="#" onClick={(e) => { e.preventDefault(); handleSuggestionClick(suggestion); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 ${index === highlightedIndex ? 'bg-gray-100 dark:bg-slate-700' : 'hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
-                                                    {suggestion}
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-5">
-                        <div className="w-full sm:w-auto">
-                            <label className="block text-gray-700 dark:text-slate-300 text-sm font-bold mb-2" htmlFor="status">สถานะ</label>
-                            <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="p-3 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none">
-                                {STATUS_CYCLE.map(statusKey => (<option key={statusKey} value={statusKey}>{STATUSES[statusKey].text}</option>))}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-3 self-end pt-4 sm:pt-0">
-                            {isEditing && <button type="button" onClick={onCancelEdit} className="bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-800 dark:text-white font-bold py-3 px-6 rounded-lg transition-colors">ยกเลิก</button>}
-                            <button type="submit" className="w-full sm:w-auto flex items-center justify-center bg-sky-600 hover:bg-sky-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg hover:shadow-sky-500/40 dark:hover:shadow-amber-500/40 transform hover:-translate-y-0.5"><PlusIcon /> {isEditing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'}</button>
-                        </div>
-                    </div>
-                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-                </form>
-            );
-        };
-
-        const SyncStatus = ({ status }) => {
-            if (!status) return null;
-            const colors = {
-                syncing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-                success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300',
-                error:   'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-            };
-            return (
-                <div className={`fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg ${colors[status.type] || colors.syncing}`}>
-                    {status.type === 'syncing' && <span className="animate-spin inline-block">⏳</span>}
-                    {status.type === 'success' && <span>✅</span>}
-                    {status.type === 'error' && <span>❌</span>}
-                    {status.msg}
-                </div>
-            );
-        };
-
-        // ─── TaskView ─────────────────────────────────────────────────────────────────
-        const TaskView = ({ year, month, day, tasksForDay, onAddTask, onUpdateTask, onDeleteTask, onBatchAdd, onBack, onPrevDay, onNextDay, showNotification, frequentTasks, onManageFrequentTasks, suggestionsSource }) => {
-            const [taskToEdit, setTaskToEdit] = useState(null);
-            const [taskToDelete, setTaskToDelete] = useState(null);
-            const [searchTerm, setSearchTerm] = useState('');
-            const [sortBy, setSortBy] = useState('default');
-
-            const handleImportFromSheets = async () => {
-                showNotification('กำลังดึงข้อมูล...');
-                try {
-                    const d = String(day).padStart(2, '0');
-                    const m = String(month).padStart(2, '0');
-                    const sheetTarget = `${d}-${m}-${year}`;
-                    const data = await fetchViaJsonp(`${APPS_SCRIPT_URL}?action=getByDate&date=${sheetTarget}`);
-                    if (data && Array.isArray(data) && data.length > 0) {
-                        const textData = data.map(item => {
-                            const room = (item.room && item.room.toUpperCase() !== 'N/A') ? item.room.trim() : '';
-                            const detail = item.description ? item.description.trim() : '';
-                            return room ? `${room} ${detail}` : detail;
-                        }).filter(line => line !== "").join('\n');
-                        onBatchAdd(textData);
-                        showNotification(`ดึงข้อมูลวันที่ ${sheetTarget} สำเร็จ (${data.length} รายการ)`);
-                    } else {
-                        showNotification('ไม่พบข้อมูลของวันที่เลือก');
-                    }
-                } catch (error) {
-                    console.error("Import Error:", error);
-                    showNotification('เกิดข้อผิดพลาดในการดึงข้อมูล');
-                }
-            };
-
-            const handleSaveTask = (taskData, isEditing) => {
-                if (isEditing) { onUpdateTask(taskData); showNotification('บันทึกการแก้ไขแล้ว'); }
-                else { onAddTask(taskData); showNotification('เพิ่มรายการสำเร็จ'); }
-                setTaskToEdit(null);
-            };
-
-            const handleDeleteConfirm = () => {
-                if (taskToDelete) { onDeleteTask(taskToDelete.id); showNotification('ลบรายการแล้ว'); setTaskToDelete(null); }
-            };
-
-            const handleStatusChange = (task, newStatus) => onUpdateTask({ ...task, status: newStatus });
-
-            const handleCopyDescription = (text) => {
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(text).then(() => showNotification('คัดลอกรายการซ่อมแล้ว!')).catch(() => legacyCopy(text));
-                } else {
-                    legacyCopy(text);
-                }
-            };
-            const legacyCopy = (text) => {
-                const ta = document.createElement("textarea");
-                ta.value = text;
-                ta.style.position = "fixed";
-                document.body.appendChild(ta);
-                ta.focus(); ta.select();
-                try { document.execCommand('copy'); showNotification('คัดลอกรายการซ่อมแล้ว!'); }
-                catch { showNotification('ไม่สามารถคัดลอกได้'); }
-                document.body.removeChild(ta);
-            };
-
-            const sortedAndFilteredTasks = useMemo(() => {
-                let sorted = [...tasksForDay];
-                if (sortBy === 'status') {
-                    const p = { pending: 1, hold: 2, cannot: 3, done: 4 };
-                    sorted.sort((a, b) => p[a.status] - p[b.status]);
-                } else if (sortBy === 'room') {
-                    sorted.sort((a, b) => a.room.localeCompare(b.room, undefined, { numeric: true }));
-                }
-                if (!searchTerm) return sorted;
-                return sorted.filter(t =>
-                    t.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    t.description.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-            }, [tasksForDay, searchTerm, sortBy]);
-
-            return (
-                <div className="p-4 sm:p-6 md:p-8 min-h-screen w-full">
-                    <ConfirmationModal isOpen={taskToDelete !== null} onClose={() => setTaskToDelete(null)} onConfirm={handleDeleteConfirm} title="ยืนยันการลบ" message={`คุณแน่ใจหรือไม่ว่าต้องการลบรายการ "${taskToDelete?.description}"?`}/>
-                    <div className="max-w-7xl mx-auto">
-                        <button onClick={onBack} className="flex items-center bg-white/80 dark:bg-white/10 backdrop-blur-sm hover:bg-white dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all duration-300 shadow-md mb-4"><BackArrowIcon /> กลับ</button>
-                        <div className="flex items-center justify-center text-center relative mb-6 flex-wrap gap-3">
-                            <button onClick={handleImportFromSheets} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl transition-all shadow-lg active:scale-95">
-                                📥 ดึงงานจาก Sheets
-                            </button>
-                            <div className="flex items-center">
-                                <button onClick={onPrevDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronLeftIcon /></button>
-                                <div className="mx-4">
-                                    <h2 className="text-3xl font-bold text-gray-800 dark:text-white">วันที่ {day} {monthNames[month - 1]} {year}</h2>
-                                    <p className="text-slate-500 dark:text-slate-400 mt-1">บันทึกรายการแท็กงาน</p>
-                                </div>
-                                <button onClick={onNextDay} className="p-2 rounded-full text-gray-800 dark:text-white hover:bg-black/10 transition-colors"><ChevronRightIcon /></button>
-                            </div>
-                        </div>
-                        <TaskForm taskToEdit={taskToEdit} onSave={handleSaveTask} onCancelEdit={() => setTaskToEdit(null)} suggestionsSource={suggestionsSource} onManageFrequentTasks={onManageFrequentTasks} onBatchAdd={onBatchAdd} />
-                        <div className="relative z-10 flex-grow">
-                            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-white">รายการทั้งหมด ({sortedAndFilteredTasks.length})</h3>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center">
-                                        <label htmlFor="sort-tasks" className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-2">เรียงตาม:</label>
-                                        <select id="sort-tasks" value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="p-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none">
-                                            <option value="default">ลำดับที่เพิ่ม</option>
-                                            <option value="status">สถานะ</option>
-                                            <option value="room">เลขห้อง</option>
-                                        </select>
-                                    </div>
-                                    <div className="relative w-full max-w-xs sm:max-w-sm">
-                                        <input type="text" placeholder="ค้นหารายการ..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="p-2 pl-10 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-gray-800 dark:text-white rounded-lg w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none"/>
-                                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
-                                    </div>
-                                </div>
-                            </div>
-                            {sortedAndFilteredTasks.length === 0 ? (
-                                <div className="text-center text-slate-400 py-12 bg-slate-50 dark:bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700">
-                                    <p className="font-semibold">{searchTerm ? 'ไม่พบรายการที่ตรงกัน' : 'ยังไม่มีรายการสำหรับวันนี้'}</p>
-                                    <p className="text-sm">{searchTerm ? 'ลองใช้คำค้นหาอื่น' : 'เพิ่มรายการแรกของคุณโดยใช้ฟอร์มด้านบน'}</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl">
-                                    <table className="min-w-full bg-white dark:bg-slate-800">
-                                        <thead className="bg-slate-50 dark:bg-slate-900/50">
-                                            <tr>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">ลำดับ</th>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">ห้อง</th>
-                                                <th className="py-2 px-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">รายการซ่อม</th>
-                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">สถานะ</th>
-                                                <th className="py-2 px-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">จัดการ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                            {sortedAndFilteredTasks.map((task, index) => {
-                                                const statusInfo = STATUSES[task.status] || STATUSES.hold;
-                                                // ✅ FIX: key ใช้ normalizeId เพื่อให้ consistent
-                                                return (
-                                                <tr key={normalizeId(task.id)} className={`${statusInfo.rowColor} ${statusInfo.rowHover} transition-colors`}>
-                                                    <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{index + 1}</td>
-                                                    <td className="py-2 px-3 text-slate-900 dark:text-white">{task.room}</td>
-                                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-300">{task.description}</td>
-                                                    <td className="py-2 px-3 text-center">
-                                                        <div className="flex items-center justify-center gap-1 flex-wrap">
-                                                            {STATUS_CYCLE.map(statusKey => {
-                                                                const isCurrentStatus = task.status === statusKey;
-                                                                const btnStatusInfo = STATUSES[statusKey];
-                                                                return (
-                                                                    <button key={statusKey} onClick={() => handleStatusChange(task, statusKey)}
-                                                                        className={`font-bold py-1 px-3 rounded-full text-xs transition-all duration-200 transform
-                                                                            ${isCurrentStatus
-                                                                                ? `${btnStatusInfo.color} scale-105 shadow-lg`
-                                                                                : `bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 opacity-60 hover:opacity-100`
-                                                                            }`}
-                                                                    >
-                                                                        {btnStatusInfo.text}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-2 px-3 text-center">
-                                                        <div className="flex justify-center items-center gap-2">
-                                                            <button onClick={() => setTaskToEdit(task)} className="text-slate-400 hover:text-sky-500 dark:hover:text-amber-400 p-2 rounded-full transition-colors duration-200"><EditIcon /></button>
-                                                            <button onClick={() => handleCopyDescription(task.description)} className="text-slate-400 hover:text-green-500 dark:hover:text-green-400 p-2 rounded-full transition-colors duration-200"><CopyIcon /></button>
-                                                            <button onClick={() => setTaskToDelete(task)} className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 p-2 rounded-full transition-colors duration-200"><TrashIcon /></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // ─── DaysView ─────────────────────────────────────────────────────────────────
-        const DaysView = ({ year, month, tasks, onSelectDay, onBack, onExport }) => {
-            const [searchQuery, setSearchQuery] = useState('');
-
-            const searchResults = useMemo(() => {
-                if (!searchQuery) return [];
-                const results = [];
-                for (let day = 1; day <= getDaysInMonth(year, month); day++) {
-                    const taskKey = `${year}-${month}-${day}`;
-                    if (tasks[taskKey]) {
-                        tasks[taskKey].forEach(task => {
-                            if (task.room.toLowerCase().includes(searchQuery.toLowerCase()) || task.description.toLowerCase().includes(searchQuery.toLowerCase())) {
-                                results.push({ ...task, day });
-                            }
-                        });
-                    }
-                }
-                return results;
-            }, [tasks, searchQuery, year, month]);
-
-            const monthlySummary = useMemo(() => {
-                const summary = { total: 0, ...Object.fromEntries(STATUS_CYCLE.map(key => [key, 0])) };
-                Object.keys(tasks).forEach(key => {
-                    const [taskYear, taskMonth] = key.split('-').map(Number);
-                    if (taskYear === year && taskMonth === month) {
-                        tasks[key].forEach(task => {
-                            summary.total++;
-                            if (summary[task.status] !== undefined) summary[task.status]++;
-                        });
-                    }
-                });
-                return summary;
-            }, [tasks, year, month]);
-
-            const days = Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1);
-
-            return (
-                <div className="p-6 md:p-8 min-h-screen">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all shadow-md"><BackArrowIcon /> กลับ</button>
-                            {monthlySummary.total > 0 && (<button onClick={() => onExport(year, month)} className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full transition-all shadow-sm"><ExportIcon /> ส่งออกเป็น Excel</button>)}
-                        </div>
-                        <div className="text-center">
-                            <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{monthNames[month - 1]}</h2>
-                            <p className="text-slate-500 dark:text-slate-400">{year}</p>
-                        </div>
-                        <div className="relative my-6">
-                            <input type="text" placeholder="ค้นหางานทั้งหมดในเดือนนี้..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="p-3 pl-10 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white rounded-full w-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-amber-500 focus:outline-none"/>
-                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon /></div>
-                        </div>
-                        {searchQuery ? (
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-700 dark:text-white mb-4">ผลการค้นหา ({searchResults.length})</h3>
-                                {searchResults.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {searchResults.map(task => {
-                                            const statusInfo = STATUSES[task.status] || STATUSES.hold;
-                                            // ✅ FIX: key ใช้ normalizeId(task.id) + day กัน duplicate ข้ามวัน
-                                            return (
-                                                <div key={`${normalizeId(task.id)}-${task.day}`} onClick={() => onSelectDay(task.day)} className="p-3 rounded-lg flex justify-between items-center cursor-pointer bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                                    <div>
-                                                        <p className="font-bold text-slate-800 dark:text-white">วันที่ {task.day} - ห้อง: {task.room}</p>
-                                                        <p className="text-slate-600 dark:text-slate-300">{task.description}</p>
-                                                    </div>
-                                                    <span className={`font-bold py-1 px-3 rounded-full text-sm ${statusInfo.color}`}>{statusInfo.text}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <p className="text-center text-slate-500 dark:text-slate-400 py-8">ไม่พบรายการที่ตรงกับ "{searchQuery}"</p>
-                                )}
-                            </div>
-                        ) : (
-                            <>
-                                {monthlySummary.total > 0 && (
-                                    <div className="mt-6 p-4 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-wrap justify-center gap-x-6 gap-y-4 text-center">
-                                        <div><p className="text-2xl font-bold text-slate-800 dark:text-white">{monthlySummary.total}</p><p className="text-sm text-slate-500 dark:text-slate-400">งานทั้งหมด</p></div>
-                                        <div><p className="text-2xl font-bold text-yellow-500 dark:text-yellow-400">{monthlySummary.pending}</p><p className="text-sm text-slate-500 dark:text-slate-400">กำลังแท็ก</p></div>
-                                        <div><p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{monthlySummary.done}</p><p className="text-sm text-slate-500 dark:text-slate-400">แท็กได้</p></div>
-                                        <div><p className="text-2xl font-bold text-slate-500 dark:text-slate-300">{monthlySummary.hold}</p><p className="text-sm text-slate-500 dark:text-slate-400">ยังไม่แท็ก</p></div>
-                                        <div><p className="text-2xl font-bold text-red-500 dark:text-red-400">{monthlySummary.cannot}</p><p className="text-sm text-slate-500 dark:text-slate-400">แท็กไม่ได้</p></div>
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 gap-3 mt-8">
-                                    {days.map(day => {
-                                        const taskKey = `${year}-${month}-${day}`;
-                                        const dayTasks = tasks[taskKey];
-                                        let indicator = null;
-                                        if (dayTasks && dayTasks.length > 0) {
-                                            const allDone = dayTasks.every(task => task.status === 'done');
-                                            indicator = allDone
-                                                ? (<span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 text-white text-sm font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 leading-none">✓</span>)
-                                                : (<span className="absolute bottom-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 animate-pulse">!</span>);
-                                        }
-                                        return (
-                                            <button key={day} onClick={() => onSelectDay(day)} className="relative bg-white dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold py-3 px-2 rounded-lg aspect-square flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg dark:hover:text-amber-400 transform hover:-translate-y-1 border border-slate-200 dark:border-slate-700">{day}{indicator}</button>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        // ─── MonthsView ───────────────────────────────────────────────────────────────
-        const MonthsView = ({ year, onSelectMonth, onBack }) => (
-            <div className="p-6 md:p-8 min-h-screen">
-                <div className="max-w-7xl mx-auto">
-                    <button onClick={onBack} className="flex items-center bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-full transition-all shadow-md mb-4"><BackArrowIcon /> กลับ</button>
-                    <div className="text-center">
-                        <h2 className="text-3xl font-bold text-slate-800 dark:text-white">เลือกเดือน</h2>
-                        <p className="text-slate-500 dark:text-slate-400">ปี {year}</p>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
-                        {monthNames.map((name, index) => {
-                            const monthNumber = index + 1;
-                            const isDisabled = year === 2025 && monthNumber <= 7;
-                            return (
-                                <button key={name} onClick={() => !isDisabled && onSelectMonth(monthNumber)} disabled={isDisabled}
-                                    className={`p-6 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg disabled:shadow-none disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed ${isDisabled ? '' : 'bg-white dark:bg-slate-800 hover:bg-sky-500 dark:hover:bg-slate-700 text-sky-600 dark:text-white border-2 border-sky-500 dark:border-slate-700 transform hover:-translate-y-1 dark:hover:shadow-amber-500/20 dark:hover:border-amber-500'}`}>
-                                    {name}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+// Manage frequent modal
+const FreqModal = ({ tasks, onAdd, onDelete, onClose }) => {
+  const [val, setVal] = useState('');
+  const add = () => { if (val.trim()&&!tasks.includes(val.trim())) { onAdd(val.trim()); setVal(''); } };
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-handle"></div>
+        <div className="modal-title">รายการใช้บ่อย</div>
+        <div className="input-group" style={{marginBottom:12}}>
+          <input className="input" value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()} placeholder="เพิ่มรายการ..."/>
+          <button className="btn btn-primary" onClick={add}>เพิ่ม</button>
+        </div>
+        <div style={{maxHeight:300,overflowY:'auto',border:'1px solid var(--border)',borderRadius:'var(--radius-sm)'}}>
+          {tasks.map((t,i) => (
+            <div key={i} style={{display:'flex',alignItems:'center',padding:'9px 12px',borderBottom:'1px solid var(--border)',gap:8}}>
+              <span style={{flex:1,fontSize:13}}>{t}</span>
+              <button className="btn-icon btn-sm" onClick={()=>onDelete(t)} style={{color:'var(--cannot)',fontSize:14}}>✕</button>
             </div>
-        );
+          ))}
+        </div>
+        <button className="btn btn-ghost w-full" onClick={onClose} style={{marginTop:12}}>ปิด</button>
+      </div>
+    </div>
+  );
+};
 
-        // ─── MainMenu ─────────────────────────────────────────────────────────────────
-        const MainMenu = ({ onSelectYear, frequentTaskStats, holdTasksSummary, onSelectTask, onSyncAll, isSyncing }) => {
-            const hasHoldTasks = holdTasksSummary && Object.keys(holdTasksSummary).length > 0;
-            return (
-                <div className="flex flex-col items-center justify-center w-full min-h-screen p-4 text-center">
-                    <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600 dark:from-amber-400 dark:to-amber-200 mb-3 py-2">แท็กงานของมิ้ว</h1>
-                    <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl mb-12">ศูนย์บัญชาการ (Mission Control)</p>
+// ─── Task View ─────────────────────────────────────────────────────────────────
+const TaskView = ({ year, month, day, tasks, onAddTask, onUpdateTask, onDeleteTask, onBack, onPrev, onNext, frequent, onManageFreq, showNotif, allTasks }) => {
+  const [room, setRoom] = useState('');
+  const [desc, setDesc] = useState('');
+  const [status, setStatus] = useState('hold');
+  const [batchText, setBatchText] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState('');
+  const [editTask, setEditTask] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggIdx, setSuggIdx] = useState(-1);
+  const [showFreqModal, setShowFreqModal] = useState(false);
+  const descRef = useRef();
 
-                    <div className="w-full max-w-4xl mx-auto mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">งาน Hold ทั้งหมดที่ยังไม่แท็ก</h2>
-                        <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-red-200/80 dark:border-slate-700">
-                            {hasHoldTasks ? (
-                                <div className="space-y-2 text-left max-h-72 overflow-y-auto p-2">
-                                    {Object.entries(holdTasksSummary).map(([room, roomTasks]) => (
-                                        <div key={room} className="p-3 rounded-lg bg-white/50 dark:bg-slate-900/40">
-                                            <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
-                                                <span className="text-red-500 mr-2">●</span>ห้อง: {room}
-                                            </h3>
-                                            <ul className="list-none pl-5 mt-1 space-y-2">
-                                                {/* ✅ FIX: key ใช้ normalizeId(task.id) ป้องกัน duplicate */}
-                                                {roomTasks.map((task) => (
-                                                    <li key={normalizeId(task.id)} onClick={() => onSelectTask(task.year, task.month, task.day)} className="text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-700 pl-3 py-1 hover:bg-sky-100 dark:hover:bg-sky-500/10 cursor-pointer rounded-r-md transition-colors">
-                                                        {task.description}
-                                                        <span className="block text-xs text-slate-400 dark:text-slate-500">วันที่ {task.day} {monthNames[task.month - 1]} {task.year}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-emerald-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <p className="font-semibold text-emerald-700 dark:text-emerald-400">เยี่ยม! ไม่มีงาน Hold ค้างอยู่</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+  // Suggestion source: all unique descriptions
+  const allDescs = useMemo(() => {
+    const set = new Set();
+    Object.values(allTasks).forEach(arr => arr.forEach(t => t.description && set.add(t.description)));
+    frequent.forEach(f => set.add(f));
+    return [...set];
+  }, [allTasks, frequent]);
 
-                    <div className="w-full max-w-4xl mx-auto">
-                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">รายการซ่อมที่พบบ่อยที่สุด</h2>
-                        <div className="bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-gray-200/80 dark:border-slate-700 mb-8">
-                            {frequentTaskStats.length > 0 ? (
-                                <ol className="space-y-2 text-left">
-                                    {frequentTaskStats.map(([description, count]) => (
-                                        // ✅ FIX: key ใช้ description แทน index กัน reorder bug
-                                        <li key={description} className="p-3 rounded-lg flex justify-between items-center hover:bg-gray-100 dark:hover:bg-slate-700">
-                                            <div className="flex items-center">
-                                                <span className="font-bold text-slate-500 dark:text-slate-400 w-8">{frequentTaskStats.findIndex(([d]) => d === description) + 1}.</span>
-                                                <span className="text-slate-800 dark:text-white">{description}</span>
-                                            </div>
-                                            <span className="font-bold py-1 px-3 rounded-full text-sm bg-sky-100 text-sky-700 dark:bg-amber-400/20 dark:text-amber-300">{count} ครั้ง</span>
-                                        </li>
-                                    ))}
-                                </ol>
-                            ) : (
-                                <p className="text-slate-500 dark:text-slate-400 py-4">ยังไม่มีข้อมูลเพียงพอที่จะแสดงผล</p>
-                            )}
-                        </div>
-                    </div>
+  const handleDescChange = (val) => {
+    setDesc(val);
+    if (val.length >= 2) {
+      const q = val.toLowerCase();
+      setSuggestions(allDescs.filter(d => d.toLowerCase().includes(q)).slice(0, 8));
+    } else setSuggestions([]);
+    setSuggIdx(-1);
+  };
 
-                    <div className="flex gap-4 flex-wrap justify-center">
-                        <button onClick={() => onSelectYear(2025)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 dark:shadow-amber-500/20 transform hover:scale-110 transition-all duration-300">2025</button>
-                        <button onClick={() => onSelectYear(2026)} className="bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 dark:from-amber-400 dark:to-amber-500 dark:hover:from-amber-500 dark:hover:to-amber-600 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-2xl shadow-sky-500/40 dark:shadow-amber-500/20 transform hover:scale-110 transition-all duration-300">2026</button>
-                    </div>
+  const pickSugg = (s) => { setDesc(s); setSuggestions([]); setSuggIdx(-1); };
 
-                    <div className="mt-8 flex flex-col items-center gap-2">
-                        <button onClick={onSyncAll} disabled={isSyncing} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-wait text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95">
-                            {isSyncing ? '⏳ กำลัง Sync...' : '📤 Sync ข้อมูลทั้งหมด → Google Sheets'}
-                        </button>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">ใช้ครั้งเดียวเพื่อย้ายข้อมูลเดิมขึ้น Sheets · หลังจากนี้บันทึกอัตโนมัติทุกครั้ง</p>
-                    </div>
+  const handleDescKey = (e) => {
+    if (!suggestions.length) return;
+    if (e.key==='ArrowDown') { e.preventDefault(); setSuggIdx(i => (i+1)%suggestions.length); }
+    else if (e.key==='ArrowUp') { e.preventDefault(); setSuggIdx(i => i<=0?suggestions.length-1:i-1); }
+    else if (e.key==='Enter'&&suggIdx>=0) { e.preventDefault(); pickSugg(suggestions[suggIdx]); }
+    else if (e.key==='Escape') setSuggestions([]);
+  };
+
+  const addTask = () => {
+    if (!desc.trim()) return;
+    const t = { id: generateId(), room: room.trim()||'N/A', description: desc.trim(), status };
+    onAddTask(t);
+    setDesc(''); setRoom(''); setStatus('hold'); setSuggestions([]);
+    showNotif('เพิ่มรายการแล้ว');
+  };
+
+  const batchAdd = () => {
+    if (!batchText.trim()) return;
+    let count = 0;
+    batchText.trim().replace(/\r/g, '').split('\n').forEach(line => {
+      line = line.trim(); if (!line) return;
+      const parts = line.split(/\s+/);
+      let r = 'N/A', d = line;
+      // เลขห้อง: 2-5 หลัก หรือ prefix ตัวอักษรตามด้วยตัวเลข เช่น A501, B-201
+      if (parts.length > 1 && /^[A-Za-z]?-?\d{2,5}$/.test(parts[0])) { r = parts[0]; d = parts.slice(1).join(' '); }
+      const t = { id: generateId(), room: r, description: d, status: 'hold' };
+      onAddTask(t); count++;
+    });
+    setBatchText(''); showNotif(`เพิ่มสำเร็จ ${count} รายการ`);
+  };
+
+  const filtered = useMemo(() => {
+    let arr = tasks;
+    if (search) {
+      const q = search.toLowerCase();
+      arr = arr.filter(t => t.description.toLowerCase().includes(q) || t.room.toLowerCase().includes(q));
+    }
+    if (sortMode === 'done') {
+      const order = { done:0, pending:1, hold:2, cannot:3 };
+      arr = [...arr].sort((a,b) => (order[a.status]??9) - (order[b.status]??9));
+    } else if (sortMode === 'hold') {
+      const order = { hold:0, pending:1, done:2, cannot:3 };
+      arr = [...arr].sort((a,b) => (order[a.status]??9) - (order[b.status]??9));
+    } else if (sortMode === 'room') {
+      arr = [...arr].sort((a,b) => a.room.localeCompare(b.room, 'th'));
+    }
+    return arr;
+  }, [tasks, search, sortMode]);
+
+  const stats = useMemo(() => {
+    const s = { hold:0, pending:0, done:0, cannot:0 };
+    tasks.forEach(t => { if (s[t.status]!==undefined) s[t.status]++; });
+    return s;
+  }, [tasks]);
+
+  const thDate = `${day} ${MONTH_NAMES[month-1]} ${year}`;
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <button className="nav-back" onClick={onBack}>← กลับ</button>
+        <div style={{textAlign:'center'}}>
+          <div className="topbar-title">วันที่ {thDate}</div>
+          <div className="topbar-sub">บันทึกรายการแก้งาน</div>
+        </div>
+        <div className="topbar-actions">
+          <button className="btn-icon" onClick={onPrev} title="วันก่อน">◀</button>
+          <button className="btn-icon" onClick={onNext} title="วันถัดไป">▶</button>
+        </div>
+      </div>
+
+      <div className="page">
+
+        {/* ── Batch Add ── */}
+        <div className="card" style={{marginBottom:12}}>
+          <div className="card-header">วางหลายรายการจาก LINE ที่นี่ (Batch Add)</div>
+          <div className="card-body">
+            <textarea className="input" value={batchText} onChange={e=>setBatchText(e.target.value)}
+              placeholder={"501 แอร์ไม่เย็น\n503 ก๊อกน้ำรั่ว\nซิลิโคนอ่างล้างหน้า"} rows={4} style={{marginBottom:10}}/>
+            <button className="btn btn-primary" onClick={batchAdd} style={{borderRadius:99}}>+ เพิ่มหลายรายการ</button>
+          </div>
+        </div>
+
+        {/* ── Add Single ── */}
+        <div className="card" style={{marginBottom:12}}>
+          <div className="card-header">เพิ่มรายการใหม่ (ทีละรายการ)</div>
+          <div className="card-body">
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              <div style={{flex:'0 0 130px'}}>
+                <label className="label">เลขห้อง (ถ้ามี)</label>
+                <input className="input" value={room} onChange={e=>setRoom(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()} placeholder="เช่น 2316"/>
+              </div>
+              <div style={{flex:1}} className="relative">
+                <label className="label">* รายการซ่อม (พิมพ์เพื่อค้นหา)</label>
+                <input
+                  className="input" ref={descRef}
+                  value={desc} onChange={e=>handleDescChange(e.target.value)}
+                  onKeyDown={handleDescKey}
+                  placeholder="พิมพ์เพื่อค้นหาหรือเพิ่มใหม่"
+                />
+                {suggestions.length > 0 && (
+                  <div className="suggestion-list">
+                    {suggestions.map((s,i) => (
+                      <div key={i} className={`suggestion-item ${i===suggIdx?'active':''}`} onMouseDown={()=>pickSugg(s)}>{s}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+              <div style={{flex:'0 0 130px'}}>
+                <label className="label">สถานะ</label>
+                <select className="input" value={status} onChange={e=>setStatus(e.target.value)}>
+                  {STATUS_CYCLE.map(s => <option key={s} value={s}>{STATUSES[s].label}</option>)}
+                </select>
+              </div>
+              <button className="btn btn-primary" onClick={addTask} style={{flex:1,borderRadius:99}}>+ เพิ่มรายการ</button>
+            </div>
+            {frequent.length > 0 && (
+              <div style={{marginTop:14,paddingTop:12,borderTop:'1px solid rgba(194,221,245,0.4)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                  <span className="label" style={{margin:0}}>รายการใช้บ่อย</span>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setShowFreqModal(true)}>จัดการ</button>
                 </div>
-            );
-        };
-
-        // ─── App ──────────────────────────────────────────────────────────────────────
-        const App = () => {
-            const [view, setView] = useState('main');
-            const [selectedYear, setSelectedYear] = useState(null);
-            const [selectedMonth, setSelectedMonth] = useState(null);
-            const [selectedDay, setSelectedDay] = useState(null);
-            const [notification, setNotification] = useState(null);
-            const [isManageFrequentOpen, setIsManageFrequentOpen] = useState(false);
-            const [isSyncing, setIsSyncing] = useState(false);
-            const [syncStatus, setSyncStatus] = useState(null);
-            const [theme, setTheme] = useState(() => localStorage.getItem('mew-theme') || 'light');
-            const [isLoadingFromSheets, setIsLoadingFromSheets] = useState(true);
-            const [loadError, setLoadError] = useState(null);
-
-            const [tasks, setTasks] = useState(() => {
-                try {
-                    const localData = localStorage.getItem('mew-tasks-data');
-                    return localData ? JSON.parse(localData) : {};
-                } catch { return {}; }
-            });
-
-            const [frequentTasks, setFrequentTasks] = useState(() => {
-                try {
-                    const localData = localStorage.getItem('mew-frequent-tasks-data');
-                    return localData ? JSON.parse(localData) : DEFAULT_FREQUENT_TASKS;
-                } catch { return DEFAULT_FREQUENT_TASKS; }
-            });
-
-            // ✅ FIX: loadFromSheets — timeout 10 วิ กัน UI บล็อกตลอด + robust merge
-            useEffect(() => {
-                let cancelled = false;
-
-                // ✅ FIX: timeout fallback — ถ้าโหลด Sheets นานเกิน 10 วิ ให้ใช้ local ต่อได้เลย
-                const timeoutId = setTimeout(() => {
-                    if (!cancelled) {
-                        console.warn('Sheets load timeout — using local data');
-                        setLoadError('⚠️ โหลดช้า — ใช้ข้อมูล Local');
-                        setIsLoadingFromSheets(false);
-                    }
-                }, 10000);
-
-                const loadFromSheets = async () => {
-                    setIsLoadingFromSheets(true);
-                    setLoadError(null);
-                    try {
-                        await flushRetryQueue();
-                        const rows = await fetchAllFromSheets();
-
-                        if (cancelled) return;
-
-                        if (!Array.isArray(rows)) {
-                            console.warn('ดึง Sheets ไม่ได้ → ใช้ localStorage');
-                            setLoadError('⚠️ ออฟไลน์ — แสดงข้อมูลจาก Local');
-                            clearTimeout(timeoutId);
-                            setIsLoadingFromSheets(false);
-                            return;
-                        }
-
-                        if (rows.length === 0) {
-                            console.log('Sheets ว่าง → คง local ไว้');
-                            clearTimeout(timeoutId);
-                            setIsLoadingFromSheets(false);
-                            return;
-                        }
-
-                        const sheetsMap = rowsToTaskMap(rows);
-                        // ✅ FIX: สร้าง Set จาก normalizeId ที่ถูกต้อง
-                        const sheetsIdSet = new Set(
-                            rows.map(r => normalizeId(r.id)).filter(Boolean)
-                        );
-
-                        setTasks(prevLocal => {
-                            const merged = {};
-
-                            // 1. เริ่มจาก Sheets (source of truth)
-                            Object.entries(sheetsMap).forEach(([key, dayTasks]) => {
-                                merged[key] = dayTasks.map(t => ({ ...t }));
-                            });
-
-                            // 2. เพิ่ม local task ที่ยังไม่อยู่ใน Sheets
-                            Object.entries(prevLocal).forEach(([key, dayTasks]) => {
-                                dayTasks.forEach(task => {
-                                    const nid = normalizeId(task.id);
-                                    if (!nid || sheetsIdSet.has(nid)) return; // ✅ ข้าม ถ้า Sheets มีแล้ว
-                                    if (!merged[key]) merged[key] = [];
-                                    // ✅ FIX: ตรวจ duplicate ก่อนใส่
-                                    const alreadyIn = merged[key].some(t => normalizeId(t.id) === nid);
-                                    if (!alreadyIn) merged[key].push({ ...task, id: nid });
-                                });
-                            });
-
-                            return merged;
-                        });
-
-                        console.log(`โหลดจาก Sheets สำเร็จ: ${rows.length} records`);
-                    } catch (err) {
-                        if (!cancelled) {
-                            console.error('loadFromSheets error:', err);
-                            setLoadError('⚠️ โหลด Sheets ไม่ได้ — ใช้ข้อมูล Local');
-                        }
-                    }
-                    if (!cancelled) {
-                        clearTimeout(timeoutId);
-                        setIsLoadingFromSheets(false);
-                    }
-                };
-
-                loadFromSheets();
-                return () => { cancelled = true; clearTimeout(timeoutId); };
-            }, []);
-
-            const suggestionsSource = useMemo(() => {
-                const allDescriptions = new Set(frequentTasks);
-                Object.values(tasks).forEach(dayTasks => {
-                    dayTasks.forEach(task => { if (task.description) allDescriptions.add(task.description.trim()); });
-                });
-                return Array.from(allDescriptions).sort();
-            }, [tasks, frequentTasks]);
-
-            useEffect(() => {
-                const root = window.document.documentElement;
-                if (theme === 'dark') root.classList.add('dark');
-                else root.classList.remove('dark');
-                localStorage.setItem('mew-theme', theme);
-            }, [theme]);
-
-            useEffect(() => {
-                try {
-                    localStorage.setItem('mew-tasks-data', JSON.stringify(tasks));
-                    localStorage.setItem('mew-frequent-tasks-data', JSON.stringify(frequentTasks));
-                } catch (error) {
-                    console.error("Error saving to localStorage", error);
-                }
-            }, [tasks, frequentTasks]);
-
-            useEffect(() => {
-                let attentionCount = 0;
-                Object.values(tasks).forEach(dayTasks => {
-                    dayTasks.forEach(task => { if (task.status !== 'done') attentionCount++; });
-                });
-                document.title = attentionCount > 0 ? `(${attentionCount}) แท็กงานของมิ้ว` : 'แท็กงานของมิ้ว';
-            }, [tasks]);
-
-            const holdTasksSummary = useMemo(() => {
-                const holdTasksByRoom = {};
-                Object.entries(tasks).forEach(([dateKey, dayTasks]) => {
-                    const [year, month, day] = dateKey.split('-').map(Number);
-                    dayTasks.forEach(task => {
-                        if (task.status === 'hold') {
-                            if (!holdTasksByRoom[task.room]) holdTasksByRoom[task.room] = [];
-                            holdTasksByRoom[task.room].push({
-                                // ✅ FIX: normalize id ใน holdTasksSummary ด้วย
-                                id: normalizeId(task.id),
-                                description: task.description,
-                                year, month, day
-                            });
-                        }
-                    });
-                });
-                const sortedRooms = Object.keys(holdTasksByRoom).sort((a, b) => {
-                    if (a === 'N/A') return 1;
-                    if (b === 'N/A') return -1;
-                    return a.localeCompare(b, undefined, { numeric: true });
-                });
-                const result = {};
-                sortedRooms.forEach(room => { result[room] = holdTasksByRoom[room]; });
-                return result;
-            }, [tasks]);
-
-            const showNotification = useCallback((message) => setNotification({ message }), []);
-
-            const handleSyncAllToSheets = async () => {
-                setIsSyncing(true);
-                setSyncStatus({ type: 'syncing', msg: 'กำลัง Sync...' });
-                try {
-                    let sheetsIds = new Set();
-                    let sheetsMap = {};
-                    const rows = await fetchAllFromSheets();
-                    if (Array.isArray(rows)) {
-                        rows.forEach(row => sheetsIds.add(normalizeId(row.id)));
-                        sheetsMap = rowsToTaskMap(rows);
-                    }
-
-                    let localData = {};
-                    try {
-                        const raw = localStorage.getItem('mew-tasks-data');
-                        if (raw) localData = JSON.parse(raw);
-                    } catch(e) {}
-
-                    const missingTasks = [];
-                    Object.entries(localData).forEach(([dateKey, dayTasks]) => {
-                        dayTasks.forEach(task => {
-                            if (!sheetsIds.has(normalizeId(task.id))) {
-                                missingTasks.push({ dateKey, task });
-                            }
-                        });
-                    });
-
-                    if (missingTasks.length > 0) {
-                        setSyncStatus({ type: 'syncing', msg: `กำลังเพิ่ม ${missingTasks.length} รายการ...` });
-                        for (const { dateKey, task } of missingTasks) {
-                            await saveTaskToSheets(task, dateKey);
-                        }
-                    }
-
-                    const merged = {};
-                    Object.entries(sheetsMap).forEach(([key, dayTasks]) => { merged[key] = [...dayTasks]; });
-                    missingTasks.forEach(({ dateKey, task }) => {
-                        if (!merged[dateKey]) merged[dateKey] = [];
-                        const nid = normalizeId(task.id);
-                        if (!merged[dateKey].some(t => normalizeId(t.id) === nid)) {
-                            merged[dateKey].push({ ...task, id: nid });
-                        }
-                    });
-                    setTasks(merged);
-
-                    const msg = missingTasks.length === 0
-                        ? '✅ ข้อมูลครบแล้ว ไม่มีอะไรตกหล่น'
-                        : `✅ Sync สำเร็จ! เพิ่ม ${missingTasks.length} รายการ`;
-                    setSyncStatus({ type: 'success', msg });
-                    showNotification(msg);
-                    setTimeout(() => setSyncStatus(null), 4000);
-                } catch (err) {
-                    setSyncStatus({ type: 'error', msg: 'Sync ผิดพลาด: ' + err.message });
-                    setTimeout(() => setSyncStatus(null), 5000);
-                }
-                setIsSyncing(false);
-            };
-
-            const handleSelectYear = (year) => { setSelectedYear(year); setView('months'); };
-            const handleSelectMonth = (month) => { setSelectedMonth(month); setView('days'); };
-            const handleSelectDay = (day) => { setSelectedDay(day); setView('tasks'); };
-            const handleSelectSpecificDate = (year, month, day) => {
-                setSelectedYear(year); setSelectedMonth(month); setSelectedDay(day); setView('tasks');
-            };
-
-            const handleAddTask = useCallback((newTask) => {
-                const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                // ✅ FIX: normalize id ก่อนบันทึก
-                const task = { ...newTask, id: normalizeId(newTask.id) };
-                setTasks(prev => {
-                    const current = prev[taskKey] || [];
-                    // ✅ กัน duplicate ถ้า add ซ้ำ
-                    if (current.some(t => normalizeId(t.id) === task.id)) return prev;
-                    return { ...prev, [taskKey]: [...current, task] };
-                });
-                saveTaskToSheets(task, taskKey);
-            }, [selectedYear, selectedMonth, selectedDay]);
-
-            // ✅ FIX: handleBatchAdd — id ไม่ชนกัน + duplicate check ถูกต้อง
-            const handleBatchAdd = useCallback((multiLineText) => {
-                if (!multiLineText.trim()) return;
-                const lines = multiLineText.split('\n').filter(line => line.trim() !== '');
-
-                setTasks(prevTasks => {
-                    const updatedTasks = { ...prevTasks };
-                    // deep clone วันที่เกี่ยวข้องเพื่อกัน mutation
-                    Object.keys(updatedTasks).forEach(k => {
-                        updatedTasks[k] = [...updatedTasks[k]];
-                    });
-
-                    let addCount = 0;
-                    const newTasksToSave = [];
-
-                    lines.forEach(line => {
-                        // ✅ FIX: room regex — ต้องขึ้นต้นด้วยตัวเลข/อักษร แล้วตามด้วย space
-                        const roomRegex = /^([0-9A-Za-z/-]+)\s+(.+)/;
-                        let room = 'N/A';
-                        let description = line.trim();
-                        const match = line.match(roomRegex);
-                        if (match) { room = match[1]; description = match[2].trim(); }
-
-                        // ✅ FIX: date regex ต้องตามด้วย space หรือ end เพื่อกัน false match
-                        const dateMatch = description.match(/^(\d{1,2})\/(\d{1,2})(?:\s|$)/);
-                        let targetDay = selectedDay;
-                        let targetMonth = selectedMonth;
-                        let finalDescription = description;
-                        if (dateMatch) {
-                            targetDay = parseInt(dateMatch[1]);
-                            targetMonth = parseInt(dateMatch[2]);
-                            finalDescription = description.replace(dateMatch[0], '').trim();
-                        }
-
-                        if (!finalDescription) return; // ข้าม line ว่าง
-
-                        const targetKey = `${selectedYear}-${targetMonth}-${targetDay}`;
-                        if (!updatedTasks[targetKey]) updatedTasks[targetKey] = [];
-
-                        const isDuplicate = updatedTasks[targetKey].some(t =>
-                            `${t.room}${t.description}`.replace(/\s+/g,'') === `${room}${finalDescription}`.replace(/\s+/g,'')
-                        );
-
-                        if (!isDuplicate) {
-                            // ✅ FIX: ใช้ generateId() กัน id ชนกัน
-                            const newTask = { id: String(generateId()), room, description: finalDescription, status: 'hold' };
-                            updatedTasks[targetKey] = [...updatedTasks[targetKey], newTask];
-                            newTasksToSave.push({ key: targetKey, task: newTask });
-                            addCount++;
-                        }
-                    });
-
-                    if (addCount > 0) {
-                        showNotification(`เพิ่มสำเร็จ ${addCount} รายการ`);
-                        // save หลัง state อัปเดต
-                        newTasksToSave.forEach(({ key, task }) => saveTaskToSheets(task, key));
-                    }
-                    return updatedTasks;
-                });
-            }, [selectedYear, selectedMonth, selectedDay, showNotification]);
-
-            const handleUpdateTask = useCallback((updatedTask) => {
-                const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                const task = { ...updatedTask, id: normalizeId(updatedTask.id) };
-                setTasks(prev => {
-                    const current = prev[taskKey] || [];
-                    return { ...prev, [taskKey]: current.map(t => normalizeId(t.id) === task.id ? task : t) };
-                });
-                saveTaskToSheets(task, taskKey);
-            }, [selectedYear, selectedMonth, selectedDay]);
-
-            const handleDeleteTask = useCallback((taskId) => {
-                const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                const nid = normalizeId(taskId);
-                setTasks(prev => {
-                    const current = prev[taskKey] || [];
-                    return { ...prev, [taskKey]: current.filter(t => normalizeId(t.id) !== nid) };
-                });
-                deleteTaskFromSheets(taskId);
-            }, [selectedYear, selectedMonth, selectedDay]);
-
-            const handleAddFrequentTask = (item) => setFrequentTasks(prev => [...prev, item]);
-            const handleDeleteFrequentTask = (item) => setFrequentTasks(prev => prev.filter(i => i !== item));
-
-            const handleDateChange = (offset) => {
-                const currentDate = new Date(selectedYear, selectedMonth - 1, selectedDay);
-                currentDate.setDate(currentDate.getDate() + offset);
-                setSelectedYear(currentDate.getFullYear());
-                setSelectedMonth(currentDate.getMonth() + 1);
-                setSelectedDay(currentDate.getDate());
-            };
-
-            const handleExportCSV = (year, month) => {
-                const headers = ["วันที่","ห้อง","รายการซ่อม","สถานะ"];
-                let csvRows = [headers.join(',')];
-                for (let day = 1; day <= getDaysInMonth(year, month); day++) {
-                    const taskKey = `${year}-${month}-${day}`;
-                    if (tasks[taskKey] && tasks[taskKey].length > 0) {
-                        csvRows.push('');
-                        csvRows.push(`"--- วันที่ ${day} ${monthNames[month - 1]} ${year} ---"`);
-                        tasks[taskKey].forEach(task => {
-                            const date = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                            const description = `"${task.description.replace(/"/g,'""')}"`;
-                            const status = STATUSES[task.status]?.text || task.status;
-                            csvRows.push([date, task.room, description, status].join(','));
-                        });
-                    }
-                }
-                const blob = new Blob([`\uFEFF${csvRows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.setAttribute('href', URL.createObjectURL(blob));
-                link.setAttribute('download', `แท็กงาน-${year}-${String(month).padStart(2,'0')}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
-
-            const goBackToMain = () => { setView('main'); setSelectedYear(null); setSelectedMonth(null); setSelectedDay(null); };
-            const goBackToMonths = () => { setView('months'); setSelectedDay(null); };
-            const goBackToDays = () => { setView('days'); setSelectedDay(null); };
-
-            const frequentTaskStats = useMemo(() => {
-                const counts = {};
-                Object.values(tasks).forEach(dayTasks => {
-                    dayTasks.forEach(task => {
-                        const desc = task.description.trim();
-                        if (desc) counts[desc] = (counts[desc] || 0) + 1;
-                    });
-                });
-                return Object.entries(counts).sort(([,a],[,b]) => b - a).slice(0, 10);
-            }, [tasks]);
-
-            const renderContent = () => {
-                switch (view) {
-                    case 'tasks': {
-                        const taskKey = `${selectedYear}-${selectedMonth}-${selectedDay}`;
-                        return <TaskView
-                            year={selectedYear} month={selectedMonth} day={selectedDay}
-                            tasksForDay={tasks[taskKey] || []}
-                            onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask}
-                            onBatchAdd={handleBatchAdd} onBack={goBackToDays}
-                            onPrevDay={() => handleDateChange(-1)} onNextDay={() => handleDateChange(1)}
-                            showNotification={showNotification} frequentTasks={frequentTasks}
-                            onManageFrequentTasks={() => setIsManageFrequentOpen(true)}
-                            suggestionsSource={suggestionsSource}
-                        />;
-                    }
-                    case 'days':
-                        return <DaysView year={selectedYear} month={selectedMonth} tasks={tasks} onSelectDay={handleSelectDay} onBack={goBackToMonths} onExport={handleExportCSV} />;
-                    case 'months':
-                        return <MonthsView year={selectedYear} onSelectMonth={handleSelectMonth} onBack={goBackToMain} />;
-                    default:
-                        return <MainMenu onSelectYear={handleSelectYear} frequentTaskStats={frequentTaskStats} holdTasksSummary={holdTasksSummary} onSelectTask={handleSelectSpecificDate} onSyncAll={handleSyncAllToSheets} isSyncing={isSyncing} />;
-                }
-            };
-
-            if (isLoadingFromSheets) {
-                return (
-                    <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 flex flex-col items-center justify-center gap-4">
-                        <div className="text-5xl animate-bounce">☁️</div>
-                        <p className="text-xl font-bold text-sky-600 dark:text-amber-400">กำลังโหลดข้อมูลจาก Google Sheets...</p>
-                        <p className="text-slate-400 text-sm">รอแป๊บนึงนะ (หมดเวลา 10 วินาที)</p>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="w-full min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 text-slate-800 dark:text-sky-300 relative">
-                    {notification && <Notification message={notification.message} onClose={() => setNotification(null)} />}
-                    <ManageFrequentTasksModal isOpen={isManageFrequentOpen} onClose={() => setIsManageFrequentOpen(false)} frequentTasks={frequentTasks} onAdd={handleAddFrequentTask} onDelete={handleDeleteFrequentTask} />
-                    {loadError && !syncStatus && (
-                        <div className="fixed bottom-5 left-5 z-50 px-4 py-2 rounded-full text-sm font-semibold bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 shadow-lg">
-                            {loadError}
-                        </div>
-                    )}
-                    <SyncStatus status={syncStatus} />
-                    {renderContent()}
-                    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="fixed top-5 right-5 z-50 bg-white/80 dark:bg-slate-700/80 backdrop-blur-lg p-3 rounded-full shadow-lg text-yellow-500 dark:text-yellow-400">
-                        {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-                    </button>
+                <div className="freq-chips">
+                  {frequent.map((f,i) => (
+                    <span key={i} className="freq-chip" onClick={()=>setDesc(f)}>{f}</span>
+                  ))}
                 </div>
-            );
-        };
+              </div>
+            )}
+          </div>
+        </div>
 
-        const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
-        root.render(<App />);
-    </script>
+        {/* ── Task List ── */}
+        <div className="card">
+          <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(194,221,245,0.4)',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--text)',marginRight:4}}>รายการทั้งหมด ({filtered.length})</div>
+            {tasks.length > 0 && Object.entries(stats).filter(([,v])=>v>0).map(([k,v]) =>
+              <span key={k} className={`badge ${STATUSES[k].cls}`} style={{cursor:'default',fontSize:11}}>{STATUSES[k].label} {v}</span>
+            )}
+            <div style={{flex:1}}/>
+            <select className="input" style={{width:'auto',fontSize:12,padding:'5px 8px',flex:'0 0 auto'}} value={sortMode} onChange={e=>setSortMode(e.target.value)}>
+              <option value="">ลำดับปกติ</option>
+              <option value="done">Done ก่อน</option>
+              <option value="hold">Hold ก่อน</option>
+              <option value="room">ห้องเรียง</option>
+            </select>
+            <input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="ค้นหารายการ..." style={{fontSize:13,flex:'0 0 160px'}}/>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="empty">
+              <div className="empty-icon">{search?'🔍':'📋'}</div>
+              <div className="empty-text">{search?'ไม่พบรายการที่ค้นหา':'ยังไม่มีรายการ'}</div>
+            </div>
+          ) : filtered.map((t,i) => (
+            <TaskRow
+              key={t.id} task={t} idx={i+1}
+              onStatusChange={updated => onUpdateTask(updated)}
+              onEdit={setEditTask}
+              onDelete={id => setDeleteId(id)}
+              onDuplicate={t => { onAddTask({...t, id: generateId()}); showNotif('คัดลอกแล้ว'); }}
+            />
+          ))}
+        </div>
+
+      </div>
+
+      {/* Modals */}
+      {editTask && (
+        <EditModal task={editTask} onClose={()=>setEditTask(null)}
+          onSave={t => { onUpdateTask(t); setEditTask(null); showNotif('บันทึกแล้ว'); }}/>
+      )}
+      {deleteId && (
+        <ConfirmModal msg="ต้องการลบรายการนี้ใช่ไหม?" onClose={()=>setDeleteId(null)}
+          onConfirm={() => { onDeleteTask(deleteId); setDeleteId(null); showNotif('ลบแล้ว'); }}/>
+      )}
+      {showFreqModal && (
+        <FreqModal tasks={frequent}
+          onAdd={f => onManageFreq('add', f)}
+          onDelete={f => onManageFreq('del', f)}
+          onClose={()=>setShowFreqModal(false)}/>
+      )}
+    </div>
+  );
+};
+
+// ─── Days View ─────────────────────────────────────────────────────────────────
+const DaysView = ({ year, month, tasks, onSelectDay, onBack, onExport }) => {
+  const days = getDaysInMonth(year, month);
+  const today = new Date();
+  const isToday = (d) => today.getFullYear()===year && today.getMonth()+1===month && today.getDate()===d;
+  const [search, setSearch] = useState('');
+
+  const searchResults = useMemo(() => {
+    if (!search.trim()) return null;
+    const q = search.toLowerCase();
+    const results = [];
+    for (let d=1; d<=days; d++) {
+      const key = `${year}-${month}-${d}`;
+      (tasks[key]||[]).forEach(t => {
+        if (t.description.toLowerCase().includes(q) || t.room.toLowerCase().includes(q)) {
+          results.push({ ...t, day: d });
+        }
+      });
+    }
+    return results;
+  }, [search, tasks, year, month, days]);
+
+  const monthStats = useMemo(() => {
+    let total=0,pending=0,done=0,cannot=0,hold=0;
+    for(let d=1;d<=days;d++){const k=`${year}-${month}-${d}`;(tasks[k]||[]).forEach(t=>{total++;if(t.status==='pending')pending++;else if(t.status==='done')done++;else if(t.status==='cannot')cannot++;else if(t.status==='hold')hold++;});}
+    return {total,pending,done,cannot,hold};
+  }, [tasks, year, month, days]);
+  return (
+    <div className="app">
+      <div className="topbar">
+        <button className="nav-back" onClick={onBack}>← กลับ</button>
+        <div style={{textAlign:'center'}}>
+          <div className="topbar-title">{MONTH_NAMES[month-1]}</div>
+          <div className="topbar-sub">{year}</div>
+        </div>
+        <button className="btn btn-primary btn-sm" style={{borderRadius:99,fontSize:12}} onClick={()=>onExport(year,month)}>⬇ ส่งออก CSV</button>
+      </div>
+      <div className="page" style={{paddingTop:16}}>
+        {/* Search bar */}
+        <div style={{marginBottom:12}}>
+          <input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="ค้นหางานทั้งหมดในเดือนนี้..." style={{borderRadius:99,paddingLeft:16}}/>
+        </div>
+        {/* Stats bar */}
+        <div style={{background:'rgba(255,255,255,0.9)',border:'1px solid rgba(194,221,245,0.5)',borderRadius:16,padding:'12px 16px',marginBottom:14,display:'flex',gap:16,boxShadow:'0 2px 8px rgba(30,136,229,0.07)'}}>
+          <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:700,fontSize:18,color:'var(--text)'}}>{monthStats.total}</div><div style={{fontSize:11,color:'var(--text2)'}}>งานทั้งหมด</div></div>
+          <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:700,fontSize:18,color:'var(--pending)'}}>{monthStats.pending}</div><div style={{fontSize:11,color:'var(--text2)'}}>กำลังแท็ก</div></div>
+          <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:700,fontSize:18,color:'var(--done)'}}>{monthStats.done}</div><div style={{fontSize:11,color:'var(--text2)'}}>แท็กได้</div></div>
+          <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:700,fontSize:18,color:'var(--hold)'}}>{monthStats.hold}</div><div style={{fontSize:11,color:'var(--text2)'}}>ยังไม่แท็ก</div></div>
+          <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:700,fontSize:18,color:'var(--cannot)'}}>{monthStats.cannot}</div><div style={{fontSize:11,color:'var(--text2)'}}>แท็กไม่ได้</div></div>
+        </div>
+        {searchResults && (
+          <div className="card" style={{marginBottom:12}}>
+            {searchResults.length === 0 ? (
+              <div className="empty"><div className="empty-icon">🔍</div><div className="empty-text">ไม่พบรายการที่ค้นหา</div></div>
+            ) : searchResults.map((t,i) => (
+              <div key={i} className="task-row" style={{cursor:'pointer'}} onClick={()=>onSelectDay(t.day)}>
+                <div style={{minWidth:28,fontSize:11,color:'var(--text3)',fontWeight:600}}>{t.day}</div>
+                <div className="task-room" style={{minWidth:40}}>{t.room}</div>
+                <div className="task-desc" style={{fontSize:13,flex:1}}>{t.description}</div>
+                <span className={`badge ${STATUSES[t.status]?.cls||''}`} style={{fontSize:11,cursor:'default'}}>{STATUSES[t.status]?.label||t.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="grid-days">
+          {Array.from({length:days},(_,i)=>i+1).map(d => {
+            const key = `${year}-${month}-${d}`;
+            const dayTasks = tasks[key]||[];
+            const count = dayTasks.length;
+            const hasCannot = dayTasks.some(t=>t.status==='cannot');
+            return (
+              <button key={d} className={`day-btn ${count>0?'has-tasks':''} ${isToday(d)?'today':''} ${hasCannot?'has-cannot':''}`} onClick={()=>onSelectDay(d)}>
+                <div className="day-num">{d}</div>
+                <div className="day-count">{count>0?count:''}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Months View ───────────────────────────────────────────────────────────────
+const MonthsView = ({ year, tasks, onSelectMonth, onBack }) => {
+  const counts = useMemo(() => {
+    const c = Array(12).fill(0);
+    Object.entries(tasks).forEach(([key, arr]) => {
+      const [y,m] = key.split('-');
+      if (+y===year) c[+m-1] += arr.length;
+    });
+    return c;
+  }, [tasks, year]);
+  return (
+    <div className="app">
+      <div className="topbar">
+        <button className="nav-back" onClick={onBack}>← กลับ</button>
+        <div style={{textAlign:'center'}}>
+          <div className="topbar-title">ปี {year}</div>
+        </div>
+        <div style={{width:60}}></div>
+      </div>
+      <div className="page" style={{paddingTop:16}}>
+        <div className="grid-months">
+          {MONTH_NAMES.map((name,i) => (
+            <button key={i} className="month-btn" onClick={()=>onSelectMonth(i+1)}>
+              <div className="month-name">{name.slice(0,3)}.</div>
+              <div className="month-count">{counts[i]>0?`${counts[i]} รายการ`:'-'}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Hold Summary Card ────────────────────────────────────────────────────────
+const HoldSummaryCard = ({ holdSummary, onSelectDate }) => {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? holdSummary : holdSummary.slice(0, 10);
+  return (
+    <div className="card" style={{marginTop:12}}>
+      <div className="card-header" style={{fontWeight:700,fontSize:15,color:"var(--text)",display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span>งาน Hold ทั้งหมดที่ยังไม่แท็ก</span>
+        <span style={{fontSize:12,color:'var(--text2)',fontWeight:500}}>{holdSummary.length} รายการ</span>
+      </div>
+      {visible.map((item,i) => (
+        <div key={i} className="hold-item" onClick={()=>onSelectDate(item.year,item.month,item.day)}>
+          <div className="hold-item-left">
+            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+              <span className="hold-item-room">{item.room && item.room !== 'N/A' ? `ห้อง ${item.room}` : ''}</span>
+              <span className="hold-item-date">· {item.day} {MONTH_NAMES[item.month-1]} {item.year}</span>
+            </div>
+            <div className="hold-item-desc">{item.description}</div>
+          </div>
+          <span style={{color:'var(--text3)',fontSize:13}}>›</span>
+        </div>
+      ))}
+      {holdSummary.length > 10 && (
+        <div style={{textAlign:'center',padding:'10px'}}>
+          <button className="btn btn-ghost btn-sm" style={{borderRadius:99}} onClick={()=>setShowAll(v=>!v)}>
+            {showAll ? '▲ ย่อลง' : `▼ ดูทั้งหมด (${holdSummary.length - 10} รายการ)`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Menu ─────────────────────────────────────────────────────────────────
+const MainMenu = ({ tasks, onSelectYear, onSync, isSyncing, frequent, freqStats, holdSummary, onSelectDate }) => {
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+  const todayCount = (tasks[todayKey]||[]).length;
+
+  const totalTasks = useMemo(() => Object.values(tasks).reduce((s,a)=>s+a.length,0), [tasks]);
+  const holdCount = useMemo(() => Object.values(tasks).reduce((s,a)=>s+a.filter(t=>t.status==='hold').length,0), [tasks]);
+
+  const [extraYears, setExtraYears] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('mew-extra-years')) || []; } catch { return []; }
+  });
+
+  // โหลดปีจาก Sheets เมื่อ mount
+  React.useEffect(() => {
+    fetchConfigFromSheets('extraYears').then(val => {
+      if (Array.isArray(val) && val.length > 0) {
+        setExtraYears(val);
+        try { localStorage.setItem('mew-extra-years', JSON.stringify(val)); } catch(e) {}
+      }
+    });
+  }, []);
+
+  const years = useMemo(() => {
+    const ys = new Set();
+    Object.keys(tasks).forEach(k => ys.add(+k.split('-')[0]));
+    ys.add(today.getFullYear());
+    extraYears.forEach(y => ys.add(y));
+    return [...ys].sort((a,b)=>b-a);
+  }, [tasks, extraYears]);
+
+  const [editYearMode, setEditYearMode] = React.useState(false);
+
+  const handleAddYear = () => {
+    const input = prompt('กรอกปี ค.ศ. ที่ต้องการเพิ่ม เช่น 2024');
+    const y = parseInt(input);
+    if (!y || isNaN(y) || y < 2000 || y > 2100) { alert('ปีไม่ถูกต้อง'); return; }
+    if (years.includes(y)) { alert('มีปีนี้อยู่แล้ว'); return; }
+    const updated = [...extraYears, y];
+    setExtraYears(updated);
+    try { localStorage.setItem('mew-extra-years', JSON.stringify(updated)); } catch(e) {}
+    saveConfigToSheets('extraYears', updated);
+  };
+
+  const handleRemoveYear = (y) => {
+    if (y === today.getFullYear()) { alert('ลบปีปัจจุบันไม่ได้'); return; }
+    const hasData = Object.keys(tasks).some(k => +k.split('-')[0] === y);
+    if (hasData) { alert('ปี ' + y + ' ยังมีข้อมูลใน Sheets อยู่\nกรุณาลบข้อมูลใน Sheets ก่อน'); return; }
+    const updated = extraYears.filter(x => x !== y);
+    setExtraYears(updated);
+    try { localStorage.setItem('mew-extra-years', JSON.stringify(updated)); } catch(e) {}
+    saveConfigToSheets('extraYears', updated);
+  };
+
+  return (
+    <div className="app">
+      <div style={{background:'rgba(255,255,255,0.0)',paddingTop:32,paddingBottom:8,textAlign:'center'}}>
+        <div style={{fontSize:32,fontWeight:800,color:'#1565c0',letterSpacing:-1,lineHeight:1.1}}>แท็กงานของมิ้ว</div>
+        <div style={{fontSize:14,color:'#5a7a9a',marginTop:4,marginBottom:20}}>ศูนย์บัญชาการ (Mission Control)</div>
+      </div>
+
+      <div className="page" style={{paddingTop:16}}>
+        {/* Stats */}
+        <div className="menu-stats" style={{marginBottom:16}}>
+          <div className="stat-card">
+            <div className="num" style={{color:'var(--accent)'}}>{todayCount}</div>
+            <div className="lbl">รายการวันนี้</div>
+          </div>
+          <div className="stat-card">
+            <div className="num" style={{color:'var(--hold)'}}>{holdCount}</div>
+            <div className="lbl">รายการ Hold</div>
+          </div>
+          <div className="stat-card">
+            <div className="num">{totalTasks}</div>
+            <div className="lbl">ทั้งหมด</div>
+          </div>
+          <div className="stat-card">
+            <div className="num">{years.length}</div>
+            <div className="lbl">ปีที่บันทึก</div>
+          </div>
+        </div>
+
+        {/* Today shortcut */}
+        <button className="btn btn-primary w-full" style={{marginBottom:12,padding:14,fontSize:15,borderRadius:99}}
+          onClick={()=>onSelectDate(today.getFullYear(), today.getMonth()+1, today.getDate())}>
+          📅 วันนี้ — {today.getDate()} {MONTH_NAMES[today.getMonth()]} {today.getFullYear()}
+        </button>
+
+        {/* Year list */}
+        <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap',marginBottom:8}}>
+          {years.map(y => (
+            <div key={y} style={{position:'relative',display:'inline-flex'}}>
+              <button onClick={()=>{ if(!editYearMode) onSelectYear(y); }}
+                style={{padding:'12px 36px',borderRadius:99,background:editYearMode?'rgba(100,100,100,0.5)':'linear-gradient(135deg,#1e88e5,#1565c0)',color:'#fff',border:'none',fontSize:17,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 14px rgba(30,136,229,0.35)',fontFamily:'inherit',opacity:editYearMode&&y===today.getFullYear()?0.5:1}}>
+                {y}
+              </button>
+              {editYearMode && y !== today.getFullYear() && (
+                <button onClick={()=>handleRemoveYear(y)}
+                  style={{position:'absolute',top:-6,right:-6,width:22,height:22,borderRadius:'50%',background:'#ef4444',color:'#fff',border:'2px solid #fff',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1,padding:0}}>
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button onClick={handleAddYear}
+            style={{padding:'12px 20px',borderRadius:99,background:'rgba(255,255,255,0.9)',color:'var(--accent)',border:'2px dashed var(--accent)',fontSize:17,fontWeight:700,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}}>
+            ＋ เพิ่มปี
+          </button>
+        </div>
+        <div style={{textAlign:'center',marginBottom:12}}>
+          <button onClick={()=>setEditYearMode(v=>!v)}
+            style={{padding:'5px 16px',borderRadius:99,background:editYearMode?'#ef4444':'transparent',color:editYearMode?'#fff':'var(--text3)',border:'1px solid',borderColor:editYearMode?'#ef4444':'var(--border)',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+            {editYearMode ? '✓ เสร็จแล้ว' : '🗑 จัดการปี'}
+          </button>
+        </div>
+
+        {/* Sync button */}
+        <div style={{textAlign:'center',marginBottom:16}}>
+          <button onClick={onSync} disabled={isSyncing}
+            style={{padding:'10px 24px',borderRadius:99,background:isSyncing?'#aaa':'linear-gradient(135deg,#26a69a,#00897b)',color:'#fff',border:'none',fontSize:13,fontWeight:600,cursor:'pointer',boxShadow:'0 3px 10px rgba(0,137,123,0.3)',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:6}}>
+            {isSyncing ? '⏳ กำลังซิงค์...' : '🔄 โหลดข้อมูลใหม่จาก Sheets'}
+          </button>
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:6}}>บันทึกอัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง กดเพื่อโหลดข้อมูลล่าสุดจาก Sheets</div>
+        </div>
+
+        {/* Hold tasks */}
+        {holdSummary.length > 0 && (
+          <HoldSummaryCard holdSummary={holdSummary} onSelectDate={onSelectDate} />
+        )}
+
+        {/* Top frequent */}
+        {freqStats.length > 0 && (
+          <div className="card" style={{marginTop:12}}>
+            <div className="card-header" style={{fontWeight:700,fontSize:15,color:"var(--text)",textTransform:"none",letterSpacing:0}}>รายการซ่อมที่พบบ่อยที่สุด</div>
+            <div style={{padding:'12px 14px'}}>
+              {freqStats.slice(0,8).map(([desc,count],i) => (
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:i<7?'1px solid rgba(194,221,245,0.3)':'none'}}>
+                  <span style={{fontSize:13,flex:1,color:'var(--text)'}}><span style={{color:'var(--text3)',marginRight:6,fontWeight:600}}>{i+1}.</span>{desc}</span>
+                  <span style={{color:'var(--accent)',fontWeight:700,fontSize:13}}>{count} ครั้ง</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── App ───────────────────────────────────────────────────────────────────────
+const App = () => {
+  const [tasks, setTasks] = useState({});
+  const [view, setView] = useState('main');
+  const [selYear, setSelYear] = useState(null);
+  const [selMonth, setSelMonth] = useState(null);
+  const [selDay, setSelDay] = useState(null);
+  const [frequent, setFrequent] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mew-freq-v2')) || DEFAULT_FREQUENT; } catch { return DEFAULT_FREQUENT; }
+  });
+  // theme removed
+  const [notif, setNotif] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+
+
+  // Save frequent
+  useEffect(() => {
+    try { localStorage.setItem('mew-freq-v2', JSON.stringify(frequent)); } catch(e) {}
+  }, [frequent]);
+
+  const showNotif = useCallback((msg) => {
+    setNotif(msg);
+  }, []);
+
+  const syncFromSheets = useCallback(async () => {
+    setLoading(true); setSyncStatus('syncing');
+    try {
+      const rows = await fetchAllFromSheets();
+      if (rows) {
+        const map = rowsToMap(rows);
+        setTasks(map);
+        setSyncStatus('ok');
+        showNotif(`โหลดสำเร็จ ${rows.length} รายการ`);
+      } else {
+        setSyncStatus('err');
+        showNotif('ดึงข้อมูลไม่ได้');
+      }
+    } catch(e) {
+      setSyncStatus('err');
+      showNotif('เกิดข้อผิดพลาด');
+    }
+    setLoading(false);
+    setTimeout(() => setSyncStatus(null), 3000);
+  }, [showNotif]);
+
+  // Auto-load from Sheets on mount (memory-only, no localStorage for tasks)
+  useEffect(() => {
+    syncFromSheets();
+  }, [syncFromSheets]);
+
+  const taskKey = (y, m, d) => `${y}-${m}-${d}`;
+
+  // รับ year/month/day จาก TaskView โดยตรง เพื่อหลีกเลี่ยง stale closure
+  // เมื่อ user กด prev/next วันเร็วๆ
+  const handleAddTask = useCallback((task, y, m, d) => {
+    const key = taskKey(y, m, d);
+    setTasks(prev => ({ ...prev, [key]: [...(prev[key]||[]), task] }));
+    saveToSheets(task, key, () => showNotif('⚠ บันทึกไม่สำเร็จ จะลองใหม่อัตโนมัติ'));
+  }, [showNotif]);
+
+  const handleUpdateTask = useCallback((updated, y, m, d) => {
+    const key = taskKey(y, m, d);
+    const t = { ...updated, id: normalizeId(updated.id) };
+    setTasks(prev => {
+      const arr = (prev[key]||[]).map(x => normalizeId(x.id)===t.id ? t : x);
+      return { ...prev, [key]: arr };
+    });
+    saveToSheets(t, key, () => showNotif('⚠ บันทึกไม่สำเร็จ จะลองใหม่อัตโนมัติ'));
+  }, [showNotif]);
+
+  const handleDeleteTask = useCallback((id, y, m, d) => {
+    const key = taskKey(y, m, d);
+    const nid = normalizeId(id);
+    setTasks(prev => ({ ...prev, [key]: (prev[key]||[]).filter(x => normalizeId(x.id)!==nid) }));
+    deleteFromSheets(id, () => showNotif('⚠ ลบไม่สำเร็จ จะลองใหม่อัตโนมัติ'));
+  }, [showNotif]);
+
+  const handleManageFreq = (action, item) => {
+    setFrequent(prev => action==='add' ? [...prev, item] : prev.filter(x=>x!==item));
+  };
+
+  const handleDateChange = (offset) => {
+    const d = new Date(selYear, selMonth-1, selDay);
+    d.setDate(d.getDate()+offset);
+    setSelYear(d.getFullYear()); setSelMonth(d.getMonth()+1); setSelDay(d.getDate());
+  };
+
+  const handleExportCSV = (y, m) => {
+    const rows = [['วันที่','ห้อง','รายการซ่อม','สถานะ'].join(',')];
+    for (let d=1; d<=getDaysInMonth(y,m); d++) {
+      const key=`${y}-${m}-${d}`;
+      (tasks[key]||[]).forEach(t => {
+        rows.push([`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`, t.room, `"${t.description.replace(/"/g,'""')}"`, STATUSES[t.status]?.label||t.status].join(','));
+      });
+    }
+    const blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `tasks-${y}-${String(m).padStart(2,'0')}.csv`;
+    a.click();
+  };
+
+  const freqStats = useMemo(() => {
+    const c = {};
+    Object.values(tasks).forEach(arr => arr.forEach(t => { if (t.description) c[t.description.trim()] = (c[t.description.trim()]||0)+1; }));
+    return Object.entries(c).sort(([,a],[,b])=>b-a).slice(0,10);
+  }, [tasks]);
+
+  const holdSummary = useMemo(() => {
+    const items = [];
+    Object.entries(tasks).forEach(([key, arr]) => {
+      const [y,m,d] = key.split('-');
+      arr.filter(t=>t.status==='hold').forEach(t => items.push({ year:+y, month:+m, day:+d, ...t }));
+    });
+    return items.sort((a,b) => new Date(b.year,b.month-1,b.day) - new Date(a.year,a.month-1,a.day));
+  }, [tasks]);
+
+  if (loading) return (
+    <div className="loading">
+      <div className="spinner"></div>
+      <div style={{color:'var(--text2)',fontSize:14}}>กำลังโหลดข้อมูลจาก Sheets...</div>
+    </div>
+  );
+
+  const renderView = () => {
+    if (view==='tasks') {
+      const key = taskKey(selYear, selMonth, selDay);
+      return <TaskView
+        year={selYear} month={selMonth} day={selDay}
+        tasks={tasks[key]||[]}
+        allTasks={tasks}
+        frequent={frequent}
+        onAddTask={task => handleAddTask(task, selYear, selMonth, selDay)}
+        onUpdateTask={task => handleUpdateTask(task, selYear, selMonth, selDay)}
+        onDeleteTask={id => handleDeleteTask(id, selYear, selMonth, selDay)}
+        onBack={() => { setView('days'); }}
+        onPrev={() => handleDateChange(-1)}
+        onNext={() => handleDateChange(1)}
+        onManageFreq={handleManageFreq}
+        showNotif={showNotif}
+      />;
+    }
+    if (view==='days') return <DaysView year={selYear} month={selMonth} tasks={tasks}
+      onSelectDay={d => { setSelDay(d); setView('tasks'); }}
+      onBack={() => setView('months')}
+      onExport={handleExportCSV}
+    />;
+    if (view==='months') return <MonthsView year={selYear} tasks={tasks}
+      onSelectMonth={m => { setSelMonth(m); setView('days'); }}
+      onBack={() => setView('main')}
+    />;
+    return <MainMenu tasks={tasks} frequent={frequent} freqStats={freqStats} holdSummary={holdSummary}
+      onSelectYear={y => { setSelYear(y); setView('months'); }}
+      onSelectDate={(y,m,d) => { setSelYear(y); setSelMonth(m); setSelDay(d); setView('tasks'); }}
+      onSync={syncFromSheets}
+      isSyncing={syncStatus==='syncing'}
+    />;
+  };
+
+  return (
+    <div style={{minHeight:'100vh',position:'relative'}}>
+      {notif && <Notification msg={notif} onClose={()=>setNotif(null)}/>}
+      <SyncStatus status={syncStatus}/>
+      {renderView()}
+      {/* Theme toggle */}
+
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
 </body>
 </html>
